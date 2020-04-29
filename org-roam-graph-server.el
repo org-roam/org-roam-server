@@ -31,7 +31,8 @@ into a json."
                (shortened-title (s-truncate org-roam-graph-max-title-length title)))
           (push (list (cons 'id (org-roam--path-to-slug file))
                       (cons 'label (xml-escape-string title))
-                      (cons 'url "123"))
+                      (cons 'url (concat "org-protocol://roam-file?file="
+                                         (url-hexify-string file))))
                 (cdr (elt graph 0)))))
       (dolist (edge edges)
         (let* ((title-source (org-roam--path-to-slug (elt edge 0)))

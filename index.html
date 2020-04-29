@@ -26,6 +26,12 @@
               old_data = event.data;
               graph = JSON.parse(event.data);
               var network = new vis.Network(container, graph, options);
+              network.on("selectNode", function (params) {
+                  if (params.nodes.length === 1) {
+                      var node = params.nodes[0];
+                      window.open(network.body.nodes[node].options.url, '_self');
+                  }
+              });
           }
       }
   });
