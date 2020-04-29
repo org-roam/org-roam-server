@@ -2,12 +2,6 @@
 (require 'json)
 (require 'org-roam-graph)
 
-(defun build-sequence (length)
-  (let ((seq '()))
-    (dotimes (i length)
-      (setq seq (cons i seq)))
-    (reverse seq)))
-
 (defun org-roam-graph--json (node-query)
   "Build the json string for NODE-QUERY.
 The Org-roam database titles table is read, to obtain the list of titles.
@@ -30,7 +24,7 @@ into a json."
            (edges-cites (org-roam-db-query edges-cites-query))
            (graph (list (cons 'nodes (list))
                         (cons 'edges (list)))))
-      (dolist (idx (build-sequence (length nodes)))
+      (dotimes (idx (length nodes))
         (let* ((file (xml-escape-string (car (elt nodes idx))))
                (title (or (caadr (elt nodes idx))
                           (org-roam--path-to-slug file)))
@@ -39,7 +33,8 @@ into a json."
                       (cons 'label (xml-escape-string title))
                       (cons 'x (* 100.0 (cos (/ (* 2.0 idx pi) (length nodes)))))
                       (cons 'y (* 100.0 (sin (/ (* 2.0 idx pi) (length nodes)))))
-                      (cons 'size 30))
+                      ;; (cons 'size 30)
+                      (cons 'url "123"))
                 (cdr (elt graph 0)))))
       (let ((idx 0))
         (dolist (edge edges)

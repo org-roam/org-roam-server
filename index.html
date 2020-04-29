@@ -12,7 +12,7 @@
     <div id="container"></div>
     <script src="jquery-3.5.0.min.js"></script>
     <script src="sigma.min.js"></script>
-    <script src="sigma.parsers.json.min.js"></script>
+    <script src="sigma.layout.forceAtlas2.min.js"></script>
     <script>
       $(document).ready(function () {
           sig = {
@@ -32,6 +32,10 @@
                   sig = new sigma(sig);
               }
               sig.startForceAtlas2({worker: true, barnesHutOptimize: false});
+              sig.graph.nodes().forEach(function(node){
+                  node.size = 10 * Math.sqrt(sig.graph.degree(node.id));
+              });
+          sig.refresh();
           }
       });
     </script>
