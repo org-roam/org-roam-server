@@ -14,6 +14,14 @@
     <script src="sigma.min.js"></script>
     <script src="sigma.layout.forceAtlas2.min.js"></script>
     <script>
+      var changed = function(obj1, obj2) {
+          for(var i in obj2) {
+              if(obj2[i] !== obj1[i]) {
+                  return true
+              }
+          }
+          return false
+      };
       $(document).ready(function () {
           sig = {
               container: 'container',
@@ -22,20 +30,24 @@
               }
           }
           const source = new EventSource("/graph-data");
+          old_data = "";
           source.onmessage = function (event) {
               graph = JSON.parse(event.data);
-              if (sig instanceof sigma) {
-                  sig.graph.clear();
-                  sig.graph.read(graph);
-              } else if (typeof sig === 'object') {
-                  sig.graph = graph;
-                  sig = new sigma(sig);
+              if (old_data.localeCompare(event.data) != 0) {
+                  old_data = event.data;
+                  if (sig instanceof sigma) {
+                      sig.graph.clear();
+                      sig.graph.read(graph);
+                  } else if (typeof sig === 'object') {
+                      sig.graph = graph;
+                      sig = new sigma(sig);
+                      sig.startForceAtlas2({worker: true, barnesHutOptimize: false});
+                  }
+                  sig.graph.nodes().forEach(function(node){
+                      node.size = 10 * Math.sqrt(sig.graph.degree(node.id));
+                  });
+                  sig.refresh();
               }
-              sig.startForceAtlas2({worker: true, barnesHutOptimize: false});
-              sig.graph.nodes().forEach(function(node){
-                  node.size = 10 * Math.sqrt(sig.graph.degree(node.id));
-              });
-          sig.refresh();
           }
       });
     </script>
