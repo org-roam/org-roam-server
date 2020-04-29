@@ -31,28 +31,20 @@ into a json."
                (shortened-title (s-truncate org-roam-graph-max-title-length title)))
           (push (list (cons 'id (org-roam--path-to-slug file))
                       (cons 'label (xml-escape-string title))
-                      (cons 'x (* 100.0 (cos (/ (* 2.0 idx pi) (length nodes)))))
-                      (cons 'y (* 100.0 (sin (/ (* 2.0 idx pi) (length nodes)))))
-                      ;; (cons 'size 30)
                       (cons 'url "123"))
                 (cdr (elt graph 0)))))
-      (let ((idx 0))
-        (dolist (edge edges)
-          (let* ((title-source (org-roam--path-to-slug (elt edge 0)))
-                 (title-target (org-roam--path-to-slug (elt edge 1))))
-            (push (list (cons 'id (format "e%d" idx))
-                        (cons 'source title-source)
-                        (cons 'target title-target))
-                  (cdr (elt graph 1)))
-            (incf idx 1)))
-        (dolist (edge edges-cites)
-          (let* ((title-source (org-roam--path-to-slug (elt edge 0)))
-                 (title-target (org-roam--path-to-slug (elt edge 1))))
-            (push (list (cons 'id (format "e%d" idx))
-                        (cons 'source title-source)
-                        (cons 'target title-target))
-                  (cdr (elt graph 1)))
-            (incf idx 1))))
+      (dolist (edge edges)
+        (let* ((title-source (org-roam--path-to-slug (elt edge 0)))
+               (title-target (org-roam--path-to-slug (elt edge 1))))
+          (push (list (cons 'from title-source)                    
+                      (cons 'to title-target))
+                (cdr (elt graph 1)))))
+      (dolist (edge edges-cites)
+        (let* ((title-source (org-roam--path-to-slug (elt edge 0)))
+               (title-target (org-roam--path-to-slug (elt edge 1))))
+          (push (list (cons 'from title-source)
+                      (cons 'to title-target))
+                (cdr (elt graph 1)))))
       (json-encode graph))))
 
 (defun org-roam-graph-server-start ()
@@ -63,13 +55,13 @@ into a json."
   (interactive)
   (httpd-stop))
 
-;; (defservlet graph text/html (path)
-;;   (httpd-send-file
-;;    httpd-current-proc
-;;    (concat (file-name-directory httpd-root) "graph.html")))
-
 (defservlet graph-data text/event-stream (path)
   (let* ((node-query `[:select [file titles]
                                :from titles
                                ,@(org-roam-graph--expand-matcher 'file t)]))
     (insert (format "data:%s\n\n" (org-roam-graph--json node-query)))))
+
+;; (defservlet graph text/html (path)
+;;   (httpd-send-file
+;;    httpd-current-proc
+;;    (concat (file-name-directory httpd-root) "graph.html")))

@@ -1,55 +1,34 @@
+<!doctype html>
 <html>
-  <head>
-    <style type="text/css">
-      #container {
-          widht: 100%;
-          height: 100%;
-          margin: auto;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="container"></div>
-    <script src="jquery-3.5.0.min.js"></script>
-    <script src="sigma.min.js"></script>
-    <script src="sigma.layout.forceAtlas2.min.js"></script>
-    <script>
-      var changed = function(obj1, obj2) {
-          for(var i in obj2) {
-              if(obj2[i] !== obj1[i]) {
-                  return true
-              }
-          }
-          return false
-      };
-      $(document).ready(function () {
-          sig = {
-              container: 'container',
-              settings: {
-                  defaultNodeColor: '#ec5148'
-              }
-          }
-          const source = new EventSource("/graph-data");
-          old_data = "";
-          source.onmessage = function (event) {
+<head>
+  <title>ORG ROAM GRAPH</title>
+  <script src="jquery-3.5.0.min.js"></script>
+  <script type="text/javascript" src="vis-network.min.js"></script>
+  <style type="text/css">
+    * { padding: 0; margin: 0; }
+    html, body, #network {
+        min-height: 100% !important;
+        height: 100%;
+        width: 100%;
+    }
+  </style>
+</head>
+<body>
+<div id="network"></div>
+<script type="text/javascript">
+  $(document).ready(function () {
+      var container = document.getElementById('network');
+      const source = new EventSource("/graph-data");
+      old_data = "";
+      var options = {};
+      source.onmessage = function (event) {
+          if (old_data.localeCompare(event.data) != 0) {
+              old_data = event.data;
               graph = JSON.parse(event.data);
-              if (old_data.localeCompare(event.data) != 0) {
-                  old_data = event.data;
-                  if (sig instanceof sigma) {
-                      sig.graph.clear();
-                      sig.graph.read(graph);
-                  } else if (typeof sig === 'object') {
-                      sig.graph = graph;
-                      sig = new sigma(sig);
-                      sig.startForceAtlas2({worker: true, barnesHutOptimize: false});
-                  }
-                  sig.graph.nodes().forEach(function(node){
-                      node.size = 10 * Math.sqrt(sig.graph.degree(node.id));
-                  });
-                  sig.refresh();
-              }
+              var network = new vis.Network(container, graph, options);
           }
-      });
-    </script>
-  </body>
+      }
+  });
+</script>
+</body>
 </html>
