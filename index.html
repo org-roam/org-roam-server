@@ -1,40 +1,116 @@
 <!doctype html>
 <html>
-<head>
-  <title>ORG ROAM GRAPH</title>
-  <script src="jquery-3.5.0.min.js"></script>
-  <script type="text/javascript" src="vis-network.min.js"></script>
-  <style type="text/css">
-    * { padding: 0; margin: 0; }
-    html, body, #network {
-        min-height: 100% !important;
-        height: 100%;
-        width: 100%;
-    }
-  </style>
-</head>
-<body>
-<div id="network"></div>
-<script type="text/javascript">
-  $(document).ready(function () {
-      var container = document.getElementById('network');
-      const source = new EventSource("/graph-data");
-      old_data = "";
-      var options = {};
-      source.onmessage = function (event) {
-          if (old_data.localeCompare(event.data) != 0) {
-              old_data = event.data;
-              graph = JSON.parse(event.data);
-              var network = new vis.Network(container, graph, options);
-              network.on("selectNode", function (params) {
-                  if (params.nodes.length === 1) {
-                      var node = params.nodes[0];
-                      window.open(network.body.nodes[node].options.url, '_self');
-                  }
-              });
-          }
+  <head>
+    <title>ORG ROAM GRAPH</title>
+    <script src="jquery-3.5.0.min.js"></script>
+    <script type="text/javascript" src="vis-network.min.js"></script>
+    <style type="text/css">
+      * { padding: 0; margin: 0; }
+      html, body, #network {
+          min-height: 100% !important;
+          height: 100%;
+          width: 100%;
       }
-  });
-</script>
-</body>
+    </style>
+  </head>
+  <body>
+    <div id="network"></div>
+    <script type="text/javascript">
+      $(document).ready(function () {
+          var container = document.getElementById('network');
+          const source = new EventSource("/graph-data");
+          oldData = "";
+          var options = {
+              nodes: {
+                  shape: 'dot',
+              }
+          };
+          source.onmessage = function (event) {
+              if (oldData.localeCompare(event.data) != 0) {
+                  oldData = event.data;
+                  graph = JSON.parse(event.data);
+                  var network = new vis.Network(container, graph, options);
+                  var nodeDataset = new vis.DataSet(graph.nodes);
+                  var edgeDataset = new vis.DataSet(graph.edges);
+                  nodes = nodeDataset.get({returnType:"Object"});
+                  var group = 0;
+                  for (var nodeId in nodes) {
+                      var connectedNodes = network.getConnectedNodes(nodeId)
+                      var degree = connectedNodes.length;
+                      nodes[nodeId].value = degree; 
+                  }
+
+                  var keys = Object.keys(nodes);
+                  function compare(a, b) {
+                      return nodes[a].value - nodes[b].value;
+                  }
+                  keys.sort(compare).reverse();
+                  var group = 0;
+                  var clusters = [];
+                  for (var i = 0; i < keys.length; i++) {
+                      k = keys[i];
+                      if (nodes[k].value > 3) {
+                          nodes[k].group = group;
+                          clusters.push(k);
+                          group++;
+                      }
+                  }
+
+                  for (var i = 0; i < clusters.length; i++) {
+                      var connectedNodes = network.getConnectedNodes(clusters[i])
+                      var intersection = clusters.filter(
+                          value => connectedNodes.includes(value));
+                      var smallest = Number.MAX_SAFE_INTEGER;
+                      var smallestNode;
+                      var biggest = 0;
+                      var biggestNode;
+                      if (intersection.length > 2){
+                          for (var j = 0; j < intersection.length; j++) {
+                              if (nodes[intersection[j]].value < smallest) {
+                                  smallest = nodes[intersection[j]].value;
+                                  smallestNode = intersection[j];
+                              }
+                              if (nodes[intersection[j]].value > biggest) {
+                                  biggest = nodes[intersection[j]].value;
+                                  biggestNode = intersection[j];
+                              }
+                          }
+                          if (network.getConnectedNodes(biggestNode).filter(
+                              value => network.getConnectedNodes(smallestNode).includes(
+                                  value)).length > 0) {
+                              nodes[smallestNode].group = nodes[biggestNode].group;
+                          }
+                      }
+                  }
+
+                  for (var nodeId in nodes) {
+                      var connectedNodes = network.getConnectedNodes(nodeId)
+                      for (var i = 0; i < connectedNodes.length; i++) {
+                          if (nodes[connectedNodes[i]].group == undefined) {
+                              nodes[connectedNodes[i]].group = nodes[nodeId].group;
+                          }
+                      }
+                  }
+                  var updateArray = [];
+
+                  for (nodeId in nodes) {
+                      if (nodes.hasOwnProperty(nodeId)) {
+                          updateArray.push(nodes[nodeId]);
+                      }
+                  }
+
+                  nodeDataset.update(updateArray);
+                  var data = {nodes:nodeDataset, edges:edgeDataset}
+                  network = new vis.Network(container, data, options);
+                  network.on("selectNode", function (params) {
+                      if (params.nodes.length === 1) {
+                          var node = params.nodes[0];
+                          window.open(network.body.nodes[node].options.url, '_self');
+                      }
+                  });
+              }
+          }
+      });
+    </script>
+  </body>
 </html>

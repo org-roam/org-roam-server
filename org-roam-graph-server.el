@@ -2,11 +2,9 @@
 (require 'json)
 (require 'org-roam-graph)
 
+(setq httpd-root (concat (file-name-directory (or load-file-name buffer-file-name)) "."))
+
 (defun org-roam-graph--json (node-query)
-  "Build the json string for NODE-QUERY.
-The Org-roam database titles table is read, to obtain the list of titles.
-The links table is then read to obtain all directed links, and formatted
-into a json."
   (org-roam-db--ensure-built)
   (org-roam--with-temp-buffer
     (let* ((nodes (org-roam-db-query node-query))
@@ -16,9 +14,9 @@ into a json."
                     :where (and (in to selected) (in from selected))])
            (edges-cites-query
             `[:with selected :as [:select [file] :from ,node-query]
-                    :select :distinct [file from]
-                    :from links :inner :join refs :on (and (= links:to refs:ref)
-                                                           (= links:type "cite"))
+                    :select :distinct [file from] :from links
+                    :inner :join refs :on (and ;(= links:to refs:ref)
+                                               (= links:type "cite"))
                     :where (and (in file selected) (in from selected))])
            (edges       (org-roam-db-query edges-query))
            (edges-cites (org-roam-db-query edges-cites-query))
@@ -38,13 +36,18 @@ into a json."
         (let* ((title-source (org-roam--path-to-slug (elt edge 0)))
                (title-target (org-roam--path-to-slug (elt edge 1))))
           (push (list (cons 'from title-source)                    
-                      (cons 'to title-target))
+                      (cons 'to title-target)
+                      ;(cons 'arrows "to")
+                      )
                 (cdr (elt graph 1)))))
       (dolist (edge edges-cites)
+        (print edge)
         (let* ((title-source (org-roam--path-to-slug (elt edge 0)))
                (title-target (org-roam--path-to-slug (elt edge 1))))
           (push (list (cons 'from title-source)
-                      (cons 'to title-target))
+                      (cons 'to title-target)
+                      ;(cons 'arrows "to")
+                      )
                 (cdr (elt graph 1)))))
       (json-encode graph))))
 
@@ -62,7 +65,4 @@ into a json."
                                ,@(org-roam-graph--expand-matcher 'file t)]))
     (insert (format "data:%s\n\n" (org-roam-graph--json node-query)))))
 
-;; (defservlet graph text/html (path)
-;;   (httpd-send-file
-;;    httpd-current-proc
-;;    (concat (file-name-directory httpd-root) "graph.html")))
+(provide 'org-roam-graph-server)
