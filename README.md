@@ -1,7 +1,7 @@
 org-roam-graph-server
 ===================================
 
-![Graph](https://raw.githubusercontent.com/goktug97/org-roam-graph-server/master/org-roam-graph.png)
+![Graph](https://raw.githubusercontent.com/goktug97/org-roam-graph-server/master/org-roam-graph-server.png)
 
 ## Requirements
 
@@ -15,16 +15,14 @@ git clone https://github.com/goktug97/org-roam-graph-server
 
 ```elisp
 (use-package org-roam-graph-server
-  :after org-roam
   :ensure nil
   :load-path <path-to-org-roam-graph-server-folder>)
 ```
 
 ## Usage
 
-Use `M-x org-roam-graph-server-start RET` to start the server and goto http://127.0.0.1:8080/
-
-To stop it: `M-x org-roam-graph-server-stop RET`
+Use `M-x org-roam-graph-server-mode RET` to enable the global mode. 
+It will start a web server on http://127.0.0.1:8080/
 
 ## Clickable Graph
 The graph uses org-roam protocol which means if you click one of the nodes
@@ -36,6 +34,7 @@ Also make sure the emacs server is started; `M-x server-start RET`
 ## License
 org-roam-graph-server is licensed under the MIT License.
 
-For Javascript libraries refer to;
-https://github.com/jquery/jquery/blob/master/LICENSE.txt
-https://github.com/visjs/vis-network
+For Javascript libraries please refer to;
+- https://github.com/jquery/jquery/blob/master/LICENSE.txt
+- https://github.com/visjs/vis-network
+- https://github.com/twbs/bootstrap/blob/master/LICENSE

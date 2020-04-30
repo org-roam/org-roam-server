@@ -2,113 +2,193 @@
 <html>
   <head>
     <title>ORG ROAM GRAPH</title>
-    <script src="jquery-3.5.0.min.js"></script>
-    <script type="text/javascript" src="vis-network.min.js"></script>
+    <link rel="stylesheet" href="assets/bootstrap.min.css">
+    <script src="assets/jquery-3.5.0.min.js"></script>
+    <script type="text/javascript" src="assets/vis-network.min.js"></script>
+    <script src="assets/bootstrap.min.js"></script>
     <style type="text/css">
       * { padding: 0; margin: 0; }
-      html, body, #network {
+      html, body, #global-network, #buffer-network {
           min-height: 100% !important;
           height: 100%;
           width: 100%;
+          overflow: hidden;
       }
     </style>
   </head>
+
   <body>
-    <div id="network"></div>
+
+    <div class="btn-group btn-group-toggle float-right" data-toggle="buttons" id="choose">
+      <label class="btn btn-sm btn-primary btn-simple active" id="0">
+        <input type="radio" name="views" checked id="global" value="global"> 
+        <span class="d-none d-sm-block d-md-block
+                     d-lg-block d-xl-block">Global View</span>
+      </label>
+      <label class="btn btn-sm btn-primary btn-simple" id="1">
+        <input type="radio" class="d-none d-sm-none" name="views" id="buffer" value="buffer">
+        <span class="d-none d-sm-block d-md-block
+                     d-lg-block d-xl-block">Buffer View</span>
+      </label>
+    </div>
+
+    <div id="global-network"></div>
+    <div id="buffer-network"></div>
+
     <script type="text/javascript">
       $(document).ready(function () {
-          var container = document.getElementById('network');
-          const source = new EventSource("/graph-data");
-          oldData = "";
+          var globalContainer = document.getElementById('global-network');
+          var bufferContainer = document.getElementById('buffer-network');
+          
+          const graphSource = new EventSource("/graph-data");
+          const bufferSource = new EventSource("/current-roam-buffer");
+
+          var nodeDataset;
+          var edgeDataset;
+
+          var globalNetwork;
+          var bufferNetwork;
+
+          var currentNode;
+          var nodes;
+          var edges;
+          var data;
+
+          var oldGraphEventData = "";
+          var oldBufferEventData = "";
+
           var options = {
               nodes: {
                   shape: 'dot',
               }
           };
-          source.onmessage = function (event) {
-              if (oldData.localeCompare(event.data) != 0) {
-                  oldData = event.data;
-                  graph = JSON.parse(event.data);
-                  var network = new vis.Network(container, graph, options);
-                  var nodeDataset = new vis.DataSet(graph.nodes);
-                  var edgeDataset = new vis.DataSet(graph.edges);
-                  nodes = nodeDataset.get({returnType:"Object"});
-                  var group = 0;
-                  for (var nodeId in nodes) {
-                      var connectedNodes = network.getConnectedNodes(nodeId)
-                      var degree = connectedNodes.length;
-                      nodes[nodeId].value = degree; 
-                  }
 
-                  var keys = Object.keys(nodes);
-                  function compare(a, b) {
-                      return nodes[a].value - nodes[b].value;
-                  }
-                  keys.sort(compare).reverse();
-                  var group = 0;
-                  var clusters = [];
-                  for (var i = 0; i < keys.length; i++) {
-                      k = keys[i];
-                      if (nodes[k].value > 3) {
-                          nodes[k].group = group;
-                          clusters.push(k);
-                          group++;
-                      }
-                  }
-
-                  for (var i = 0; i < clusters.length; i++) {
-                      var connectedNodes = network.getConnectedNodes(clusters[i])
-                      var intersection = clusters.filter(
-                          value => connectedNodes.includes(value));
-                      var smallest = Number.MAX_SAFE_INTEGER;
-                      var smallestNode;
-                      var biggest = 0;
-                      var biggestNode;
-                      if (intersection.length > 2){
-                          for (var j = 0; j < intersection.length; j++) {
-                              if (nodes[intersection[j]].value < smallest) {
-                                  smallest = nodes[intersection[j]].value;
-                                  smallestNode = intersection[j];
-                              }
-                              if (nodes[intersection[j]].value > biggest) {
-                                  biggest = nodes[intersection[j]].value;
-                                  biggestNode = intersection[j];
-                              }
-                          }
-                          if (network.getConnectedNodes(biggestNode).filter(
-                              value => network.getConnectedNodes(smallestNode).includes(
-                                  value)).length > 0) {
-                              nodes[smallestNode].group = nodes[biggestNode].group;
-                          }
-                      }
-                  }
-
-                  for (var nodeId in nodes) {
-                      var connectedNodes = network.getConnectedNodes(nodeId)
-                      for (var i = 0; i < connectedNodes.length; i++) {
-                          if (nodes[connectedNodes[i]].group == undefined) {
-                              nodes[connectedNodes[i]].group = nodes[nodeId].group;
-                          }
-                      }
-                  }
-                  var updateArray = [];
-
-                  for (nodeId in nodes) {
-                      if (nodes.hasOwnProperty(nodeId)) {
-                          updateArray.push(nodes[nodeId]);
-                      }
-                  }
-
-                  nodeDataset.update(updateArray);
-                  var data = {nodes:nodeDataset, edges:edgeDataset}
-                  network = new vis.Network(container, data, options);
-                  network.on("selectNode", function (params) {
-                      if (params.nodes.length === 1) {
-                          var node = params.nodes[0];
-                          window.open(network.body.nodes[node].options.url, '_self');
-                      }
-                  });
+          graphSource.onmessage = function (event) {
+              if (oldGraphEventData.localeCompare(event.data) != 0) {
+                  oldGraphEventData = event.data;
+                  data = JSON.parse(event.data);
+                  updateNodesAndEdges();
+                  drawGlobalNetwork();
               }
+          }
+
+          bufferSource.onmessage = function (event) {
+              if (oldBufferEventData.localeCompare(event.data) != 0) {
+                  oldBufferEventData = event.data;
+                  currentNode = event.data;
+                  if (currentNode !== "") {
+                      drawBufferNetwork();
+                  }
+              }
+          }
+
+          $("#0").click(function() {
+              globalContainer.style.display = "block";
+              bufferContainer.style.display = "none";
+          });
+          $("#1").click(function() {
+              globalContainer.style.display = "none";
+              bufferContainer.style.display = "block";
+              if (currentNode) {
+                  drawBufferNetwork();
+              }
+          });
+
+          function compareNodeValues(nodeId1, nodeId2) {
+              return nodes[nodeId1].value - nodes[nodeId2].value;
+          }
+
+          function updateNodesAndEdges () {
+              globalNetwork = new vis.Network(globalContainer, data, options);
+              nodeDataset = new vis.DataSet(data.nodes);
+              edgeDataset = new vis.DataSet(data.edges);
+              nodes = nodeDataset.get({returnType:"Object"});
+              edges = edgeDataset.get({returnType:"Object"});
+
+              // Set value depending on number of connected nodes
+              for (var nodeId in nodes) {
+                  var connectedNodes = globalNetwork.getConnectedNodes(nodeId)
+                  var degree = connectedNodes.length;
+                  nodes[nodeId].value = degree; 
+              }
+
+              // Set group as cluster center if it has more than 3 connected nodes
+              var keys = Object.keys(nodes);
+              keys.sort(compareNodeValues).reverse();
+              var group = 0;
+              var clusters = [];
+              for (var i = 0; i < keys.length; i++) {
+                  k = keys[i];
+                  if (nodes[k].value > 3) {
+                      nodes[k].group = group;
+                      clusters.push(k);
+                      group++;
+                  }
+              }
+
+              // If a cluster center is connected to more than two clusters
+              // join the cluster with the biggest connected cluster
+              for (var i = 0; i < clusters.length; i++) {
+                  var connectedNodes = globalNetwork.getConnectedNodes(clusters[i])
+                  var intersection = clusters.filter(
+                      value => connectedNodes.includes(value));
+                  if (intersection.length > 2){
+                      intersection.sort(compareNodeValues);
+                      nodes[intersection[0]].group = nodes[intersection.pop()].group;
+                  }
+              }
+
+              // Set groups of other nodes
+              for (var nodeId in nodes) {
+                  var connectedNodes = globalNetwork.getConnectedNodes(nodeId)
+                  for (var i = 0; i < connectedNodes.length; i++) {
+                      if (nodes[connectedNodes[i]].group == undefined) {
+                          nodes[connectedNodes[i]].group = nodes[nodeId].group;
+                      }
+                  }
+              }
+          }
+
+          function onNodeClick(params) {
+              if (params.nodes.length === 1) {
+                  var node = params.nodes[0];
+                  currentNode = node;
+                  window.open(globalNetwork.body.nodes[node].options.url, '_self');
+                  currentNode = node;
+                  // If we are in the buffer view, 
+                  if (bufferContainer.style.display === "block") {
+                      drawBufferNetwork();
+                  }
+              }
+          }
+
+          function drawBufferNetwork() {
+              var connectedNodes = globalNetwork.getConnectedNodes(currentNode);
+              bufferNodes = [nodes[currentNode]];
+              for (var i = 0; i < connectedNodes.length; i++) {
+                  if (connectedNodes[i] !== currentNode) {
+                      bufferNodes.push(nodes[connectedNodes[i]]);
+                  }
+              }
+              var bufferNodeDataset = new vis.DataSet(bufferNodes);
+              bufferNetwork = new vis.Network(
+                  bufferContainer,
+                  {nodes:bufferNodeDataset, edges:edgeDataset},
+                  options);
+              bufferNetwork.on("selectNode", onNodeClick);
+          }
+          
+          function drawGlobalNetwork() {
+              var updateArray = [];
+              for (nodeId in nodes) {
+                  if (nodes.hasOwnProperty(nodeId)) {
+                      updateArray.push(nodes[nodeId]);
+                  }
+              }
+              nodeDataset.update(updateArray);
+              data = {nodes:nodeDataset, edges:edgeDataset}
+              globalNetwork = new vis.Network(globalContainer, data, options);
+              globalNetwork.on("selectNode", onNodeClick);
           }
       });
     </script>
