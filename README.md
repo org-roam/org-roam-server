@@ -31,6 +31,14 @@ https://org-roam.readthedocs.io/en/develop/roam_protocol/
 
 Also make sure the emacs server is started; `M-x server-start RET`
 
+## Contribution
+- I don't know Javascript, I just smash my keyboard until it works. So if someone
+,proficient in Javascript, thinks the code looks really bad, please clean it up
+and open a pull request.
+- I think the grouping code
+https://github.com/goktug97/org-roam-graph-server/blob/6b33e9d54c6babdfec826283d8c268628803f3dc/index.html#L115-L149
+is not good. So if anyone has a better idea for grouping please fix it and open a pull request.
+
 ## License
 org-roam-graph-server is licensed under the MIT License.
 
