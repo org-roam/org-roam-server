@@ -70,7 +70,6 @@
     (remove-hook 'post-command-hook #'org-roam-graph-find-file-hook-function t)
     (dolist (buf (org-roam--get-roam-buffers))
       (with-current-buffer buf
-        (org-link-set-parameters "file" :face 'org-link)
         (remove-hook 'post-command-hook #'org-roam-graph-update-current-buffer t)))
     (httpd-stop))))
 
