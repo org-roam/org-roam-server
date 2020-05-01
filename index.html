@@ -21,7 +21,7 @@
 
     <div class="btn-group btn-group-toggle float-right" data-toggle="buttons" id="choose">
       <label class="btn btn-sm btn-primary btn-simple active" id="0">
-        <input type="radio" name="views" checked id="global" value="global"> 
+        <input type="radio" name="views" checked id="global" value="global">
         <span class="d-none d-sm-block d-md-block
                      d-lg-block d-xl-block">Global View</span>
       </label>
@@ -36,10 +36,25 @@
     <div id="buffer-network"></div>
 
     <script type="text/javascript">
+
+      Array.prototype.max = function(compare) {
+          if (this.length === 0) return null;
+          if (this.length === 1) return this[0];
+          compare = (compare || Math.max);
+          var v = this[0];
+          for (var i = 1; i < this.length; i++) {
+              var ret = compare(this[i], v);
+              if (ret > 0) {
+                  v = this[i];
+              }
+          }
+          return v;
+      }
+
       $(document).ready(function () {
           var globalContainer = document.getElementById('global-network');
           var bufferContainer = document.getElementById('buffer-network');
-          
+
           const graphSource = new EventSource("/graph-data");
           const bufferSource = new EventSource("/current-roam-buffer");
 
@@ -109,41 +124,27 @@
               for (var nodeId in nodes) {
                   var connectedNodes = globalNetwork.getConnectedNodes(nodeId)
                   var degree = connectedNodes.length;
-                  nodes[nodeId].value = degree; 
+                  nodes[nodeId].value = degree;
               }
 
-              // Set group as cluster center if it has more than 3 connected nodes
+              // Group the nodes
               var keys = Object.keys(nodes);
-              keys.sort(compareNodeValues).reverse();
+              keys.sort(compareNodeValues);
               var group = 0;
-              var clusters = [];
               for (var i = 0; i < keys.length; i++) {
                   k = keys[i];
-                  if (nodes[k].value > 3) {
-                      nodes[k].group = group;
-                      clusters.push(k);
-                      group++;
-                  }
-              }
-
-              // If a cluster center is connected to more than two clusters
-              // join the cluster with the biggest connected cluster
-              for (var i = 0; i < clusters.length; i++) {
-                  var connectedNodes = globalNetwork.getConnectedNodes(clusters[i])
-                  var intersection = clusters.filter(
-                      value => connectedNodes.includes(value));
-                  if (intersection.length > 2){
-                      intersection.sort(compareNodeValues);
-                      nodes[intersection[0]].group = nodes[intersection.pop()].group;
-                  }
-              }
-
-              // Set groups of other nodes
-              for (var nodeId in nodes) {
-                  var connectedNodes = globalNetwork.getConnectedNodes(nodeId)
-                  for (var i = 0; i < connectedNodes.length; i++) {
-                      if (nodes[connectedNodes[i]].group == undefined) {
-                          nodes[connectedNodes[i]].group = nodes[nodeId].group;
+                  if (!nodes[k].group) {
+                      var connectedNodes = globalNetwork.getConnectedNodes(k);
+                      if (connectedNodes.length > 0) {
+                          node = connectedNodes.max(compareNodeValues);
+                          if (!nodes[node].group) {
+                              nodes[node].group = group;
+                              group += 1;
+                          }
+                          nodes[k].group = nodes[node].group;
+                      } else {
+                          nodes[k].group = group;
+                          group += 1;
                       }
                   }
               }
@@ -155,7 +156,7 @@
                   currentNode = node;
                   window.open(globalNetwork.body.nodes[node].options.url, '_self');
                   currentNode = node;
-                  // If we are in the buffer view, 
+                  // If we are in the buffer view,
                   if (bufferContainer.style.display === "block") {
                       drawBufferNetwork();
                   }
@@ -177,7 +178,7 @@
                   options);
               bufferNetwork.on("selectNode", onNodeClick);
           }
-          
+
           function drawGlobalNetwork() {
               var updateArray = [];
               for (nodeId in nodes) {
