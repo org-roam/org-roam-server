@@ -34,7 +34,8 @@ Also make sure the emacs server is started; `M-x server-start RET`
 ## License
 org-roam-graph-server is licensed under the MIT License.
 
-For Javascript libraries please refer to;
+For Javascript and CSS libraries please refer to;
 - https://github.com/jquery/jquery/blob/master/LICENSE.txt
 - https://github.com/visjs/vis-network
 - https://github.com/twbs/bootstrap/blob/master/LICENSE
+- https://github.com/gongzhitaao/orgcss
