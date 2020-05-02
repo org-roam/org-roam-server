@@ -5,6 +5,7 @@ org-roam-graph-server
 
 ## Requirements
 
+- [org-roam](https://github.com/jethrokuan/org-roam)
 - [simple-httpd](https://github.com/skeeto/emacs-web-server/)
 
 ## use-package

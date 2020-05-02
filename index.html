@@ -89,10 +89,10 @@
       }
 
       $(document).ready(function () {
-          var globalContainer = document.getElementById('global-network');
-          var bufferContainer = document.getElementById('buffer-network');
-          var hoverFrame = document.getElementById('hoverframe');
-          var hoverNode = document.getElementById('hovernode');
+          var globalContainer = document.getElementById("global-network");
+          var bufferContainer = document.getElementById("buffer-network");
+          var hoverFrame = document.getElementById("hoverframe");
+          var hoverNode = document.getElementById("hovernode");
 
           $("#hoverframe").hover(
               function () {
@@ -125,7 +125,7 @@
 
           var options = {
               nodes: {
-                  shape: 'dot',
+                  shape: "dot",
               },
               interaction:{hover:true}
           };
@@ -217,7 +217,8 @@
                       clickTime = Date.now();
                       var node = params.nodes[0];
                       currentNode = node;
-                      window.open(globalNetwork.body.nodes[node].options.url, '_self');
+                      window.open(globalNetwork.body.nodes[node].options.url,
+                                  "_self");
                       currentNode = node;
                       // If we are in the buffer view,
                       if (bufferContainer.style.display === "block") {
@@ -232,8 +233,8 @@
                   hoverNode.src = params.node.concat(".html");
                   var pageWidth = $(window).width();
                   var pageHeight = $(window).height();
-                  var hoverFrameWidth = $('#hoverframe').width();
-                  var hoverFrameHeight = $('#hoverframe').height();
+                  var hoverFrameWidth = $("#hoverframe").width();
+                  var hoverFrameHeight = $("#hoverframe").height();
                   var hoverFrameX = params.event.clientX;
                   var hoverFrameY = params.event.clientY;
                   if ((hoverFrameX + hoverFrameWidth) > pageWidth) {
