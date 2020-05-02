@@ -8,16 +8,50 @@
     <script src="assets/bootstrap.min.js"></script>
     <style type="text/css">
       * { padding: 0; margin: 0; }
-      html, body, #global-network, #buffer-network {
+      html, body {
           min-height: 100% !important;
           height: 100%;
           width: 100%;
           overflow: hidden;
+          position: relative;
+          z-index: 0;
+      }
+
+      #global-network, #buffer-network {
+          min-height: 100% !important;
+          height: 100%;
+          width: 100%;
+          overflow: hidden;
+          position: relative;
+          z-index: 4;
+      }
+
+      #hoverframe{
+          display: none;
+          position: absolute;
+          z-index: 100;
+      }
+
+      #iframe-button {
+          display: block;
+          position: absolute;
+          z-index: 101;
+      }
+
+      #choose {
+          position: relative;
+          z-index: 3;
       }
     </style>
+
   </head>
 
   <body>
+    <div class="box" id="hoverframe">
+      <button class="btn btn-link float-left" id="iframe-button" onclick="history.back()">Back</button>
+      <iframe src="" width="500px" height="300px" id="hovernode">
+      </iframe>
+    </div>
 
     <div class="btn-group btn-group-toggle float-right" data-toggle="buttons" id="choose">
       <label class="btn btn-sm btn-primary btn-simple active" id="0">
@@ -31,6 +65,9 @@
                      d-lg-block d-xl-block">Buffer View</span>
       </label>
     </div>
+    <label class="btn btn-sm btn-primary btn-simple" id="3">
+      Enable Preview
+    </label>
 
     <div id="global-network"></div>
     <div id="buffer-network"></div>
@@ -54,6 +91,16 @@
       $(document).ready(function () {
           var globalContainer = document.getElementById('global-network');
           var bufferContainer = document.getElementById('buffer-network');
+          var hoverFrame = document.getElementById('hoverframe');
+          var hoverNode = document.getElementById('hovernode');
+
+          $("#hoverframe").hover(
+              function () {
+                  hoverFrame.style.display = "block";
+              },
+              function () {
+                  hoverFrame.style.display = "none";
+              });
 
           const graphSource = new EventSource("/graph-data");
           const bufferSource = new EventSource("/current-roam-buffer");
@@ -69,13 +116,18 @@
           var edges;
           var data;
 
+          var clickTime = 0;
+
           var oldGraphEventData = "";
           var oldBufferEventData = "";
+
+          var preview = false;
 
           var options = {
               nodes: {
                   shape: 'dot',
-              }
+              },
+              interaction:{hover:true}
           };
 
           graphSource.onmessage = function (event) {
@@ -106,6 +158,15 @@
               bufferContainer.style.display = "block";
               if (currentNode) {
                   drawBufferNetwork();
+              }
+          });
+          $("#3").click(function() {
+              if (preview) {
+                  preview = false;
+                  $("#3").text("Enable Preview");
+              } else {
+                  preview = true;
+                  $("#3").text("Disable Preview");
               }
           });
 
@@ -151,15 +212,46 @@
           }
 
           function onNodeClick(params) {
-              if (params.nodes.length === 1) {
-                  var node = params.nodes[0];
-                  currentNode = node;
-                  window.open(globalNetwork.body.nodes[node].options.url, '_self');
-                  currentNode = node;
-                  // If we are in the buffer view,
-                  if (bufferContainer.style.display === "block") {
-                      drawBufferNetwork();
+              if ((Date.now() - clickTime) > 1000) {
+                  if (params.nodes.length === 1) {
+                      clickTime = Date.now();
+                      var node = params.nodes[0];
+                      currentNode = node;
+                      window.open(globalNetwork.body.nodes[node].options.url, '_self');
+                      currentNode = node;
+                      // If we are in the buffer view,
+                      if (bufferContainer.style.display === "block") {
+                          drawBufferNetwork();
+                      }
                   }
+              }
+          }
+
+          function onNodeHover(params) {
+              if (preview) {
+                  hoverNode.src = params.node.concat(".html");
+                  var pageWidth = $(window).width();
+                  var pageHeight = $(window).height();
+                  var hoverFrameWidth = $('#hoverframe').width();
+                  var hoverFrameHeight = $('#hoverframe').height();
+                  var hoverFrameX = params.event.clientX;
+                  var hoverFrameY = params.event.clientY;
+                  if ((hoverFrameX + hoverFrameWidth) > pageWidth) {
+                      hoverFrameX = hoverFrameX - hoverFrameWidth;
+                  }
+                  if ((hoverFrameY + hoverFrameHeight) > pageHeight) {
+                      hoverFrameY = hoverFrameY - hoverFrameHeight;
+                  }
+
+                  var transformString =
+                      `translateX(${hoverFrameX}px)`+
+                      `translateY(${hoverFrameY}px)`;
+                  hoverFrame.style.webkitTransform = transformString;
+                  hoverFrame.style.MozTransform = transformString;
+                  hoverFrame.style.msTransform = transformString;
+                  hoverFrame.style.OTransform = transformString;
+                  hoverFrame.style.transform = transformString;
+                  hoverFrame.style.display = "block";
               }
           }
 
@@ -177,6 +269,7 @@
                   {nodes:bufferNodeDataset, edges:edgeDataset},
                   options);
               bufferNetwork.on("selectNode", onNodeClick);
+              bufferNetwork.on("hoverNode", onNodeHover);
           }
 
           function drawGlobalNetwork() {
@@ -190,6 +283,7 @@
               data = {nodes:nodeDataset, edges:edgeDataset}
               globalNetwork = new vis.Network(globalContainer, data, options);
               globalNetwork.on("selectNode", onNodeClick);
+              globalNetwork.on("hoverNode", onNodeHover);
           }
       });
     </script>

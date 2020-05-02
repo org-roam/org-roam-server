@@ -1,7 +1,7 @@
 org-roam-graph-server
 ===================================
 
-![Graph](https://raw.githubusercontent.com/goktug97/org-roam-graph-server/master/org-roam-graph-server.png)
+![Graph](https://raw.githubusercontent.com/goktug97/org-roam-graph-server/master/org-roam-graph-server.gif)
 
 ## Requirements
 
