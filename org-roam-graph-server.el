@@ -58,6 +58,7 @@
   `(defservlet ,(intern (concat (org-roam--path-to-slug file) ".html")) text/html (path)
      (let ((html-string))
        (with-temp-buffer
+         (setq-local org-export-with-sub-superscripts nil)
          (setq-local
           org-html-style-default
           (format "<style>%s</style>"
@@ -105,7 +106,8 @@ This is added as a hook to `org-capture-after-finalize-hook'."
           (push (list (cons 'id (org-roam--path-to-slug file))
                       (cons 'label (xml-escape-string title))
                       (cons 'url (concat "org-protocol://roam-file?file="
-                                         (url-hexify-string file))))
+                                         (url-hexify-string file)))
+                      (cons 'path file))
                 (cdr (elt graph 0)))))
       (dolist (edge edges)
         (let* ((title-source (org-roam--path-to-slug (elt edge 0)))
@@ -124,6 +126,7 @@ This is added as a hook to `org-capture-after-finalize-hook'."
                       )
                 (cdr (elt graph 1)))))
       (json-encode graph))))
+
 
 ;;;###autoload
 (define-minor-mode org-roam-graph-server-mode
@@ -175,6 +178,103 @@ This is added as a hook to `org-capture-after-finalize-hook'."
                                :from titles
                                ,@(org-roam-graph--expand-matcher 'file t)]))
     (insert (format "data:%s\n\n" (org-roam-graph-server-visjs-json node-query)))))
+
+(org-link-set-parameters "server" :export #'org-server-export)
+
+(defun org-server-export (link description format)
+  "Custom export setting for backlinks."
+  (let ((desc (or description link)))
+    (pcase format
+      (`html (format "<a name=\"backlink\" id=\"%s\" href=\"javascript:void(0)\">%s</a>" link desc))
+      (t link))))
+
+(defun org-roam-graph-server-insert-title (title)
+  "Insert the TITLE as `org-document-title`."
+  (insert (propertize title 'font-lock-face 'org-document-title)))
+
+(defun org-roam-graph-server-insert-citelinks (file)
+  "Insert citation backlinks for the FILE."
+  (if-let* ((ref (with-temp-buffer
+                   (insert-file-contents file)
+                   (org-roam--extract-ref)))
+            (org-ref-p (require 'org-ref nil t)) ; Ensure that org-ref is present
+            (key-backlinks (org-roam--get-backlinks (cdr ref)))
+            (grouped-backlinks (--group-by (nth 0 it) key-backlinks)))
+      (progn
+        (insert (let ((l (length key-backlinks)))
+                  (format "\n\n* %d %s\n"
+                          l (org-roam-buffer--pluralize "Cite backlink" l))))
+        (dolist (group grouped-backlinks)
+          (let ((file-from (car group))
+                (bls (cdr group)))
+            (insert (format "** [[server:%s][%s]]\n"
+                            (first (last (split-string file-from "/")))
+                            (org-roam--get-title-or-slug file-from)))
+            (dolist (group grouped-backlinks)
+              (let ((file-from (car group))
+                    (bls (cdr group)))
+                (insert (format "** [[server:%s][%s]]\n"
+                                (first (last (split-string file-from "/")))
+                                (org-roam--get-title-or-slug file-from)))
+                (dolist (backlink bls)
+                  (pcase-let ((`(,file-from _ ,props) backlink))
+                    (insert (s-trim
+                             (s-replace "\n" " "
+                                        (s-replace
+                                         (format "file:%s" (file-truename org-roam-directory))
+                                         "server:" (plist-get props :content)))))
+                    (insert "\n\n"))))))))
+    (insert "\n\n* No cite backlinks!")))
+
+(defun org-roam-graph-server-insert-backlinks (file)
+  "Insert the backlinks string for the FILE."
+  (if file
+      (if-let* ((backlinks (org-roam--get-backlinks file))
+                (grouped-backlinks (--group-by (nth 0 it) backlinks)))
+          (progn
+            (insert (let ((l (length backlinks)))
+                      (format "\n\n* %d %s\n"
+                              l (org-roam-buffer--pluralize "Backlink" l))))
+            (dolist (group grouped-backlinks)
+              (let ((file-from (car group))
+                    (bls (cdr group)))
+                (insert (format "** [[server:%s][%s]]\n"
+                                (first (last (split-string file-from "/")))
+                                (org-roam--get-title-or-slug file-from)))
+                (dolist (backlink bls)
+                  (pcase-let ((`(,file-from _ ,props) backlink))
+                    (insert (s-trim
+                             (s-replace "\n" " "
+                                        (s-replace
+                                         (format "file:%s" (file-truename org-roam-directory))
+                                         "server:" (plist-get props :content)))))
+                    (insert "\n\n"))))))
+        (insert "\n\n* No backlinks!"))))
+
+(defservlet* org-roam-buffer text/html (path label)
+  (if (and path label)
+      (let ((source-org-roam-directory org-roam-directory)
+            (html-string))
+        (with-temp-buffer
+          (erase-buffer)
+          (setq-local org-roam-directory source-org-roam-directory)
+          (setq-local default-directory source-org-roam-directory)
+          (setq-local
+           org-html-style-default
+           (format "<style>%s</style>"
+                   (with-temp-buffer
+                     (insert-file-contents
+                      (concat org-roam-graph-server-root
+                              "/assets/org.css"))
+                     (buffer-string))))
+          (setq-local org-export-with-toc nil)
+          (setq-local org-export-with-section-numbers nil)
+          (setq-local org-export-with-sub-superscripts nil)
+          (org-roam-graph-server-insert-title label)
+          (org-roam-graph-server-insert-backlinks path)
+          (org-roam-graph-server-insert-citelinks path)
+          (setq html-string (org-export-as 'html)))
+        (insert html-string))))
 
 (provide 'org-roam-graph-server)
 

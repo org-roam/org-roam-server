@@ -105,6 +105,7 @@
     <div class="fileframe" id="fileframe">
       <button class="btn btn-link float-left" id="iframe-button" onclick="history.back()">Back</button>
       <iframe src="" id="filenode"></iframe>
+      <iframe src="" id="backlinks"></iframe>
     </div>
 
 
@@ -138,12 +139,17 @@
           $("#fileframe").css("msTransform", transformString);
           $("#fileframe").css("OTransform", transformString);
           $("#fileframe").css("transform", transformString);
-          $("#filenode").width($(window).width() - 50);
+          $("#filenode").width(($(window).width() - 50) * 0.7);
+          $("#backlinks").width(($(window).width() - 50) * 0.3);
           $("#filenode").height($(window).height() - $("#choose").height() - 50);
+          $("#backlinks").height($(window).height() - $("#choose").height() - 50);
           window.onresize = function() {
-              $("#filenode").width($(window).width() - 50);
+              $("#filenode").width(($(window).width() - 50) * 0.7);
+              $("#backlinks").width(($(window).width() - 50) * 0.3);
               $("#filenode").height($(window).height() - $("#choose").height() - 50);
+              $("#backlinks").height($(window).height() - $("#choose").height() - 50);
           }
+
 
           $("#hoverframe").hover(
               function () {
@@ -187,19 +193,51 @@
                   data = JSON.parse(event.data);
 
                   // Update Select2
-                  select2Data = [];
+                  var select2Data = [];
                   for (var i = 0 ; i < data.nodes.length; i++) {
                       select2Data.push({id: data.nodes[i].id,
-                                        text: data.nodes[i].label})
+                                        text: data.nodes[i].label,
+                                        path: data.nodes[i].path})
                   }
+
                   $(".dropdownfiles").select2({
                       data: select2Data,
                       placeholder: "File"
                   });
+
+
                   $('.dropdownfiles').on('select2:select', function (e) {
                       $("#filenode").attr("src", e.params.data.id.concat(".html"));
                   });
 
+                  $("#filenode").on("load", function () {
+                      var string = document.getElementById("filenode").contentWindow.location.href;
+                      string = string.substring(string.lastIndexOf('/') + 1);
+                      string = string.substring(0, string.lastIndexOf('.'));
+                      for (var i = 0; i < select2Data.length; i++) {
+                          if (select2Data[i].id === string) {
+                              var link = `org-roam-buffer?path=${select2Data[i].path}&label=${select2Data[i].text}`;
+                              break
+                          }
+                      }
+                      $("#backlinks").attr("src", link);
+                      $('#backlinks').on('load', function() {
+                          var links = document.getElementById("backlinks")
+                              .contentWindow.document.getElementsByName("backlink");
+                          for (var i = 0; i < links.length; i++) {
+                              links[i].onclick = function () {
+                                  url = this.id.substring(0, this.id.lastIndexOf('.'));
+                                  url = url.concat(".html");
+                                  base_location = document.getElementById("filenode").contentWindow.location;
+                                  url = `${base_location.protocol}//${base_location.host}/${url}`
+                                  $("#filenode").attr("src", url);
+                              }
+                          }
+                      });
+
+                  });
+
+                  
                   // Initialize Global Network
                   updateNodesAndEdges();
                   drawGlobalNetwork();
