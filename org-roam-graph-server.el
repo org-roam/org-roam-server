@@ -46,7 +46,7 @@
 
 (defvar org-roam-graph-server-current-buffer (window-buffer))
 (defun org-roam-graph-server-update-current-buffer ()
-  "Save the current buffer in a variable to publish to server."
+  "Save the current buffer in a variable to serve to the server."
   (setq org-roam-graph-server-current-buffer
         (window-buffer)))
 
@@ -70,8 +70,17 @@
          (setq html-string (org-export-as 'html)))
        (insert html-string))))
 
+(defun org-roam-graph-server-capture-servlet ()
+  "Create a servlet for the recently captured `org-roam` file.
+This is added as a hook to `org-capture-after-finalize-hook'."
+  (when (and (not org-note-abort)
+             (eq (org-roam-capture--get :capture-fn)
+                 'org-roam-insert))
+    (let ((file (org-roam-capture--get :file-path)))
+      (eval (org-roam-graph-server-html-servlet file)))))
+
 (defun org-roam-graph-server-visjs-json (node-query)
-  "Convert `org-roam` db to visjs json format."
+  "Convert `org-roam` NODE-QUERY db query to the visjs json format."
   (org-roam-db--ensure-built)
   (org-roam--with-temp-buffer
     (let* ((nodes (org-roam-db-query node-query))
@@ -125,6 +134,7 @@
   (cond
    (org-roam-graph-server-mode
     (add-hook 'post-command-hook #'org-roam-graph-server-find-file-hook-function)
+    (add-hook 'org-capture-after-finalize-hook #'org-roam-graph-server-capture-servlet)
     (httpd-start)
     (let ((node-query `[:select [file titles] :from titles
                                 ,@(org-roam-graph--expand-matcher 'file t)]))
@@ -136,13 +146,14 @@
                   (eval (org-roam-graph-server-html-servlet file)))))))))
    (t
     (remove-hook 'post-command-hook #'org-roam-graph-server-find-file-hook-function t)
+    (remove-hook 'org-capture-after-finalize-hook #'org-roam-graph-server-capture-servlet)
     (dolist (buf (org-roam--get-roam-buffers))
       (with-current-buffer buf
         (remove-hook 'post-command-hook #'org-roam-graph-server-update-current-buffer t)))
     (httpd-stop))))
 
 (defun org-roam-graph-server-find-file-hook-function ()
-  "If a file is an `org-roam` file, update the current buffer."
+  "If the current visited file is an `org-roam` file, update the current buffer."
   (when (org-roam--org-roam-file-p)
     (setq org-roam-last-window (get-buffer-window))
     (add-hook 'post-command-hook #'org-roam-graph-server-update-current-buffer nil t)
