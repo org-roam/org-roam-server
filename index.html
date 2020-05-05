@@ -3,9 +3,11 @@
   <head>
     <title>ORG ROAM GRAPH</title>
     <link rel="stylesheet" href="assets/bootstrap.min.css">
+    <link rel="stylesheet" href="assets/select2.min.css">
     <script src="assets/jquery-3.5.0.min.js"></script>
     <script type="text/javascript" src="assets/vis-network.min.js"></script>
     <script src="assets/bootstrap.min.js"></script>
+    <script src="assets/select2.min.js"></script>
     <style type="text/css">
       * { padding: 0; margin: 0; }
       html, body {
@@ -32,6 +34,12 @@
           z-index: 100;
       }
 
+      #fileframe{
+          display: none;
+          position: absolute;
+          z-index: 100;
+      }
+
       #iframe-button {
           display: block;
           position: absolute;
@@ -40,13 +48,30 @@
 
       #choose {
           position: relative;
-          z-index: 3;
+          z-index: 5;
       }
+
+      #dropdownfiles {
+          display: none;
+          position: absolute;
+          width: 300px;
+          z-index: 5;
+      }
+
+      #preview {
+          position: absolute;
+      }
+
     </style>
 
   </head>
 
   <body>
+    <div id="dropdownfiles">
+      <select class="dropdownfiles" name="files" style="width: 300px">
+        <option></option>
+      </select>
+    </div>
     <div class="box" id="hoverframe">
       <button class="btn btn-link float-left" id="iframe-button" onclick="history.back()">Back</button>
       <iframe src="" width="500px" height="300px" id="hovernode">
@@ -54,23 +79,34 @@
     </div>
 
     <div class="btn-group btn-group-toggle float-right" data-toggle="buttons" id="choose">
-      <label class="btn btn-sm btn-primary btn-simple active" id="0">
+      <label class="btn btn-sm btn-primary btn-simple active" id="globalview">
         <input type="radio" name="views" checked id="global" value="global">
         <span class="d-none d-sm-block d-md-block
                      d-lg-block d-xl-block">Global View</span>
       </label>
-      <label class="btn btn-sm btn-primary btn-simple" id="1">
-        <input type="radio" class="d-none d-sm-none" name="views" id="buffer" value="buffer">
+      <label class="btn btn-sm btn-primary btn-simple" id="bufferview">
+        <input type="radio" class="d-none d-sm-none" name="views"
+               id="buffer" value="buffer">
         <span class="d-none d-sm-block d-md-block
                      d-lg-block d-xl-block">Buffer View</span>
       </label>
+      <label class="btn btn-sm btn-primary btn-simple" id="fileview">
+        <input type="radio" class="d-none d-sm-none" name="views"
+               id="files" value="files">
+        <span class="d-none d-sm-block d-md-block
+                     d-lg-block d-xl-block">File View</span>
+      </label>
     </div>
-    <label class="btn btn-sm btn-primary btn-simple" id="3">
+    <label class="btn btn-sm btn-primary btn-simple" id="preview">
       Enable Preview
     </label>
-
     <div id="global-network"></div>
     <div id="buffer-network"></div>
+    <div class="fileframe" id="fileframe">
+      <button class="btn btn-link float-left" id="iframe-button" onclick="history.back()">Back</button>
+      <iframe src="" id="filenode"></iframe>
+    </div>
+
 
     <script type="text/javascript">
 
@@ -93,6 +129,21 @@
           var bufferContainer = document.getElementById("buffer-network");
           var hoverFrame = document.getElementById("hoverframe");
           var hoverNode = document.getElementById("hovernode");
+
+          var transformString =
+              `translateX(25px)`+
+              `translateY(${($("#choose").height() + 50)/2}px)`;
+          $("#fileframe").css("webkitTransform", transformString);
+          $("#fileframe").css("MozTransform", transformString);
+          $("#fileframe").css("msTransform", transformString);
+          $("#fileframe").css("OTransform", transformString);
+          $("#fileframe").css("transform", transformString);
+          $("#filenode").width($(window).width() - 50);
+          $("#filenode").height($(window).height() - $("#choose").height() - 50);
+          window.onresize = function() {
+              $("#filenode").width($(window).width() - 50);
+              $("#filenode").height($(window).height() - $("#choose").height() - 50);
+          }
 
           $("#hoverframe").hover(
               function () {
@@ -134,6 +185,23 @@
               if (oldGraphEventData.localeCompare(event.data) != 0) {
                   oldGraphEventData = event.data;
                   data = JSON.parse(event.data);
+
+                  // Update Select2
+                  select2Data = [];
+                  for (var i = 0 ; i < data.nodes.length; i++) {
+                      select2Data.push({id: data.nodes[i].id,
+                                        text: data.nodes[i].label})
+                  }
+                  $(".dropdownfiles").select2({
+                      data: select2Data,
+                      placeholder: "File"
+                  });
+                  $("#dropdownfiles").css("display", "none");
+                  $('.dropdownfiles').on('select2:select', function (e) {
+                      $("#filenode").attr("src", e.params.data.id.concat(".html"));
+                  });
+
+                  // Initialize Global Network
                   updateNodesAndEdges();
                   drawGlobalNetwork();
               }
@@ -149,24 +217,38 @@
               }
           }
 
-          $("#0").click(function() {
+          $("#globalview").click(function() {
+              $("#preview").css("display", "block");
+              $("#dropdownfiles").css("display", "none");
+              $("#fileframe").css("display", "none");
               globalContainer.style.display = "block";
               bufferContainer.style.display = "none";
           });
-          $("#1").click(function() {
+
+          $("#bufferview").click(function() {
+              $("#preview").css("display", "block");
+              $("#dropdownfiles").css("display", "none");
+              $("#fileframe").css("display", "none");
               globalContainer.style.display = "none";
               bufferContainer.style.display = "block";
               if (currentNode) {
                   drawBufferNetwork();
               }
           });
-          $("#3").click(function() {
+          $("#fileview").click(function() {
+              globalContainer.style.display = "none";
+              bufferContainer.style.display = "none";
+              $("#preview").css("display", "none");
+              $("#dropdownfiles").css("display", "block");
+              $("#fileframe").css("display", "block");
+          });
+          $("#preview").click(function() {
               if (preview) {
                   preview = false;
-                  $("#3").text("Enable Preview");
+                  $("#preview").text("Enable Preview");
               } else {
                   preview = true;
-                  $("#3").text("Disable Preview");
+                  $("#preview").text("Disable Preview");
               }
           });
 

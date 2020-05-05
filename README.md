@@ -40,3 +40,4 @@ For Javascript and CSS libraries please refer to;
 - https://github.com/visjs/vis-network
 - https://github.com/twbs/bootstrap/blob/master/LICENSE
 - https://github.com/gongzhitaao/orgcss
+- https://github.com/select2/select2
