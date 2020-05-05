@@ -1,7 +1,7 @@
-;;; org-roam-graph-server.el --- Org Roam Database Visualizer -*- lexical-binding: t; -*-
+;;; org-roam-server.el --- Org Roam Database Visualizer -*- lexical-binding: t; -*-
 
 ;; Author: Göktuğ Karakaşlı <karakasligk@gmail.com>
-;; URL: https://github.com/goktug97/org-roam-graph-server
+;; URL: https://github.com/goktug97/org-roam-server
 ;; Version: 1.0.0
 ;; Package-Requires: ((org-roam "1.1.1") (org "9.3") (emacs "26.1") (simple-httpd "1.5.1"))
 
@@ -28,8 +28,8 @@
 ;; SOFTWARE.
 
 ;;; Commentary:
-;; A web application to visualize the org-roam database in an interactive graph.
-;; Use M-x org-roam-graph-server-mode RET to enable the global mode.
+;; A web application to visualize the org-roam database.
+;; Use M-x org-roam-server-mode RET to enable the global mode.
 ;; It will start a web server on http://127.0.0.1:8080
 
 (require 'simple-httpd)
@@ -44,16 +44,16 @@
 
 ;;; Code:
 
-(defvar org-roam-graph-server-current-buffer (window-buffer))
-(defun org-roam-graph-server-update-current-buffer ()
+(defvar org-roam-server-current-buffer (window-buffer))
+(defun org-roam-server-update-current-buffer ()
   "Save the current buffer in a variable to serve to the server."
-  (setq org-roam-graph-server-current-buffer
+  (setq org-roam-server-current-buffer
         (window-buffer)))
 
-(defvar org-roam-graph-server-root (concat (file-name-directory (or load-file-name buffer-file-name)) "."))
-(setq httpd-root org-roam-graph-server-root)
+(defvar org-roam-server-root (concat (file-name-directory (or load-file-name buffer-file-name)) "."))
+(setq httpd-root org-roam-server-root)
 
-(defun org-roam-graph-server-html-servlet (file)
+(defun org-roam-server-html-servlet (file)
   "Export the FILE to HTML and create a servlet for it."
   `(defservlet ,(intern (concat (org-roam--path-to-slug file) ".html")) text/html (path)
      (let ((html-string))
@@ -64,23 +64,23 @@
           (format "<style>%s</style>"
                   (with-temp-buffer
                     (insert-file-contents
-                     (concat org-roam-graph-server-root
+                     (concat org-roam-server-root
                              "/assets/org.css"))
                     (buffer-string))))
          (insert-file-contents ,file)
          (setq html-string (org-export-as 'html)))
        (insert html-string))))
 
-(defun org-roam-graph-server-capture-servlet ()
+(defun org-roam-server-capture-servlet ()
   "Create a servlet for the recently captured `org-roam` file.
 This is added as a hook to `org-capture-after-finalize-hook'."
   (when (and (not org-note-abort)
              (eq (org-roam-capture--get :capture-fn)
                  'org-roam-insert))
     (let ((file (org-roam-capture--get :file-path)))
-      (eval (org-roam-graph-server-html-servlet file)))))
+      (eval (org-roam-server-html-servlet file)))))
 
-(defun org-roam-graph-server-visjs-json (node-query)
+(defun org-roam-server-visjs-json (node-query)
   "Convert `org-roam` NODE-QUERY db query to the visjs json format."
   (org-roam-db--ensure-built)
   (org-roam--with-temp-buffer
@@ -129,15 +129,15 @@ This is added as a hook to `org-capture-after-finalize-hook'."
 
 
 ;;;###autoload
-(define-minor-mode org-roam-graph-server-mode
+(define-minor-mode org-roam-server-mode
   "Start the http server and serve org-roam files."
   :lighter ""
   :global t
   :init-value nil
   (cond
-   (org-roam-graph-server-mode
-    (add-hook 'post-command-hook #'org-roam-graph-server-find-file-hook-function)
-    (add-hook 'org-capture-after-finalize-hook #'org-roam-graph-server-capture-servlet)
+   (org-roam-server-mode
+    (add-hook 'post-command-hook #'org-roam-server-find-file-hook-function)
+    (add-hook 'org-capture-after-finalize-hook #'org-roam-server-capture-servlet)
     (httpd-start)
     (let ((node-query `[:select [file titles] :from titles
                                 ,@(org-roam-graph--expand-matcher 'file t)]))
@@ -146,30 +146,30 @@ This is added as a hook to `org-capture-after-finalize-hook'."
           (dotimes (idx (length nodes))
             (let ((file (xml-escape-string (car (elt nodes idx)))))
               (if (org-roam--org-roam-file-p file)
-                  (eval (org-roam-graph-server-html-servlet file)))))))))
+                  (eval (org-roam-server-html-servlet file)))))))))
    (t
-    (remove-hook 'post-command-hook #'org-roam-graph-server-find-file-hook-function t)
-    (remove-hook 'org-capture-after-finalize-hook #'org-roam-graph-server-capture-servlet)
+    (remove-hook 'post-command-hook #'org-roam-server-find-file-hook-function t)
+    (remove-hook 'org-capture-after-finalize-hook #'org-roam-server-capture-servlet)
     (dolist (buf (org-roam--get-roam-buffers))
       (with-current-buffer buf
-        (remove-hook 'post-command-hook #'org-roam-graph-server-update-current-buffer t)))
+        (remove-hook 'post-command-hook #'org-roam-server-update-current-buffer t)))
     (httpd-stop))))
 
-(defun org-roam-graph-server-find-file-hook-function ()
+(defun org-roam-server-find-file-hook-function ()
   "If the current visited file is an `org-roam` file, update the current buffer."
   (when (org-roam--org-roam-file-p)
     (setq org-roam-last-window (get-buffer-window))
-    (add-hook 'post-command-hook #'org-roam-graph-server-update-current-buffer nil t)
-    (org-roam-graph-server-update-current-buffer)))
+    (add-hook 'post-command-hook #'org-roam-server-update-current-buffer nil t)
+    (org-roam-server-update-current-buffer)))
 
 (defservlet current-roam-buffer text/event-stream (path)
   (insert (format "data:%s\n\n"
                   (if (org-roam--org-roam-file-p
-                       (buffer-file-name org-roam-graph-server-current-buffer))
+                       (buffer-file-name org-roam-server-current-buffer))
                       (car (last
                             (split-string
                              (org-roam--path-to-slug
-                              (buffer-name org-roam-graph-server-current-buffer))
+                              (buffer-name org-roam-server-current-buffer))
                              "/")))
                     ""))))
 
@@ -177,7 +177,7 @@ This is added as a hook to `org-capture-after-finalize-hook'."
   (let* ((node-query `[:select [file titles]
                                :from titles
                                ,@(org-roam-graph--expand-matcher 'file t)]))
-    (insert (format "data:%s\n\n" (org-roam-graph-server-visjs-json node-query)))))
+    (insert (format "data:%s\n\n" (org-roam-server-visjs-json node-query)))))
 
 (org-link-set-parameters "server" :export #'org-server-export)
 
@@ -188,11 +188,11 @@ This is added as a hook to `org-capture-after-finalize-hook'."
       (`html (format "<a name=\"backlink\" id=\"%s\" href=\"javascript:void(0)\">%s</a>" link desc))
       (t link))))
 
-(defun org-roam-graph-server-insert-title (title)
+(defun org-roam-server-insert-title (title)
   "Insert the TITLE as `org-document-title`."
   (insert (propertize title 'font-lock-face 'org-document-title)))
 
-(defun org-roam-graph-server-insert-citelinks (file)
+(defun org-roam-server-insert-citelinks (file)
   "Insert citation backlinks for the FILE."
   (if-let* ((ref (with-temp-buffer
                    (insert-file-contents file)
@@ -226,7 +226,7 @@ This is added as a hook to `org-capture-after-finalize-hook'."
                     (insert "\n\n"))))))))
     (insert "\n\n* No cite backlinks!")))
 
-(defun org-roam-graph-server-insert-backlinks (file)
+(defun org-roam-server-insert-backlinks (file)
   "Insert the backlinks string for the FILE."
   (if file
       (if-let* ((backlinks (org-roam--get-backlinks file))
@@ -264,18 +264,18 @@ This is added as a hook to `org-capture-after-finalize-hook'."
            (format "<style>%s</style>"
                    (with-temp-buffer
                      (insert-file-contents
-                      (concat org-roam-graph-server-root
+                      (concat org-roam-server-root
                               "/assets/org.css"))
                      (buffer-string))))
           (setq-local org-export-with-toc nil)
           (setq-local org-export-with-section-numbers nil)
           (setq-local org-export-with-sub-superscripts nil)
-          (org-roam-graph-server-insert-title label)
-          (org-roam-graph-server-insert-backlinks path)
-          (org-roam-graph-server-insert-citelinks path)
+          (org-roam-server-insert-title label)
+          (org-roam-server-insert-backlinks path)
+          (org-roam-server-insert-citelinks path)
           (setq html-string (org-export-as 'html)))
         (insert html-string))))
 
-(provide 'org-roam-graph-server)
+(provide 'org-roam-server)
 
-;;; org-roam-graph-server.el ends here
+;;; org-roam-server.el ends here
