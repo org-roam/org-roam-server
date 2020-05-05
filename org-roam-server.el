@@ -179,10 +179,14 @@ This is added as a hook to `org-capture-after-finalize-hook'."
                                ,@(org-roam-graph--expand-matcher 'file t)]))
     (insert (format "data:%s\n\n" (org-roam-server-visjs-json node-query)))))
 
-(org-link-set-parameters "server" :export #'org-server-export)
+(org-link-set-parameters "server" :export #'org-roam-server-export-server-id)
 
-(defun org-server-export (link description format)
-  "Custom export setting for backlinks."
+(defun org-roam-server-export-server-id (link description format)
+  "Custom export setting for backlinks.
+Use LINK as an id in the <a> html tag instead
+of href as it is used in another window.
+The setting only applies to HTML FORMAT.
+DESCRIPTION is the shown attribute to the user."
   (let ((desc (or description link)))
     (pcase format
       (`html (format "<a name=\"backlink\" id=\"%s\" href=\"javascript:void(0)\">%s</a>" link desc))
