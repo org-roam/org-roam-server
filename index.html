@@ -196,7 +196,6 @@
                       data: select2Data,
                       placeholder: "File"
                   });
-                  $("#dropdownfiles").css("display", "none");
                   $('.dropdownfiles').on('select2:select', function (e) {
                       $("#filenode").attr("src", e.params.data.id.concat(".html"));
                   });
