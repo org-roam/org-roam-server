@@ -28,7 +28,7 @@
           z-index: 4;
       }
 
-      #hoverframe{
+      #preview-frame{
           display: none;
           position: absolute;
           z-index: 100;
@@ -46,7 +46,7 @@
           z-index: 101;
       }
 
-      #choose {
+      #view-menu {
           position: relative;
           z-index: 5;
       }
@@ -54,11 +54,10 @@
       #dropdownfiles {
           display: none;
           position: absolute;
-          width: 300px;
           z-index: 5;
       }
 
-      #preview {
+      #toggle-preview {
           position: absolute;
       }
 
@@ -72,13 +71,13 @@
         <option></option>
       </select>
     </div>
-    <div class="box" id="hoverframe">
+    <div class="box" id="preview-frame">
       <button class="btn btn-link float-left" id="iframe-button" onclick="history.back()">Back</button>
-      <iframe src="" width="500px" height="300px" id="hovernode">
+      <iframe src="" id="hovernode">
       </iframe>
     </div>
 
-    <div class="btn-group btn-group-toggle float-right" data-toggle="buttons" id="choose">
+    <div class="btn-group btn-group-toggle float-right" data-toggle="buttons" id="view-menu">
       <label class="btn btn-sm btn-primary btn-simple active" id="globalview">
         <input type="radio" name="views" checked id="global" value="global">
         <span class="d-none d-sm-block d-md-block
@@ -97,7 +96,7 @@
                      d-lg-block d-xl-block">File Viewer</span>
       </label>
     </div>
-    <label class="btn btn-sm btn-primary btn-simple" id="preview">
+    <label class="btn btn-sm btn-primary btn-simple" id="toggle-preview">
       Enable Preview
     </label>
     <div id="global-network"></div>
@@ -111,6 +110,7 @@
 
     <script type="text/javascript">
 
+      // Maximum of an array given compare function
       Array.prototype.max = function(compare) {
           if (this.length === 0) return null;
           if (this.length === 1) return this[0];
@@ -128,36 +128,31 @@
       $(document).ready(function () {
           var globalContainer = document.getElementById("global-network");
           var bufferContainer = document.getElementById("buffer-network");
-          var hoverFrame = document.getElementById("hoverframe");
-          var hoverNode = document.getElementById("hovernode");
+
+          var previewFrame = document.getElementById("preview-frame"); // div
+          var hoverNode = document.getElementById("hovernode"); // iframe
 
           var transformString =
               `translateX(25px)`+
-              `translateY(${($("#choose").height() + 50)/2}px)`;
+              `translateY(${($("#view-menu").height() + 50)/2}px)`;
           $("#fileframe").css("webkitTransform", transformString);
           $("#fileframe").css("MozTransform", transformString);
           $("#fileframe").css("msTransform", transformString);
           $("#fileframe").css("OTransform", transformString);
           $("#fileframe").css("transform", transformString);
-          $("#filenode").width(($(window).width() - 50) * 0.7);
-          $("#backlinks").width(($(window).width() - 50) * 0.3);
-          $("#filenode").height($(window).height() - $("#choose").height() - 50);
-          $("#backlinks").height($(window).height() - $("#choose").height() - 50);
-          window.onresize = function() {
+
+          function resizeFileViewer () {
               $("#filenode").width(($(window).width() - 50) * 0.7);
               $("#backlinks").width(($(window).width() - 50) * 0.3);
-              $("#filenode").height($(window).height() - $("#choose").height() - 50);
-              $("#backlinks").height($(window).height() - $("#choose").height() - 50);
-          }
+              $("#filenode").height($(window).height() - $("#view-menu").height() - 50);
+              $("#backlinks").height($(window).height() - $("#view-menu").height() - 50);
+          };
+          resizeFileViewer();
+          window.onresize = resizeFileViewer;
 
-
-          $("#hoverframe").hover(
-              function () {
-                  hoverFrame.style.display = "block";
-              },
-              function () {
-                  hoverFrame.style.display = "none";
-              });
+          $("#preview-frame").hover(
+              function () {previewFrame.style.display = "block";},
+              function () {previewFrame.style.display = "none";});
 
           const graphSource = new EventSource("/graph-data");
           const bufferSource = new EventSource("/current-roam-buffer");
@@ -172,8 +167,6 @@
           var nodes;
           var edges;
           var data;
-
-          var clickTime = 0;
 
           var oldGraphEventData = "";
           var oldBufferEventData = "";
@@ -205,10 +198,10 @@
                       placeholder: "File"
                   });
 
-
                   $('.dropdownfiles').on('select2:select', function (e) {
                       $("#filenode").attr("src", e.params.data.id.concat(".html"));
                   });
+                  $("#dropdownfiles").width($(window).width() * 0.25);
 
                   $("#filenode").on("load", function () {
                       var string = document.getElementById("filenode").contentWindow.location.href;
@@ -255,7 +248,7 @@
           }
 
           $("#globalview").click(function() {
-              $("#preview").css("display", "block");
+              $("#toggle-preview").css("display", "block");
               $("#dropdownfiles").css("display", "none");
               $("#fileframe").css("display", "none");
               globalContainer.style.display = "block";
@@ -263,7 +256,7 @@
           });
 
           $("#bufferview").click(function() {
-              $("#preview").css("display", "block");
+              $("#toggle-preview").css("display", "block");
               $("#dropdownfiles").css("display", "none");
               $("#fileframe").css("display", "none");
               globalContainer.style.display = "none";
@@ -275,17 +268,17 @@
           $("#fileview").click(function() {
               globalContainer.style.display = "none";
               bufferContainer.style.display = "none";
-              $("#preview").css("display", "none");
+              $("#toggle-preview").css("display", "none");
               $("#dropdownfiles").css("display", "block");
               $("#fileframe").css("display", "block");
           });
-          $("#preview").click(function() {
+          $("#toggle-preview").click(function() {
               if (preview) {
                   preview = false;
-                  $("#preview").text("Enable Preview");
+                  $("#toggle-preview").text("Enable Preview");
               } else {
                   preview = true;
-                  $("#preview").text("Disable Preview");
+                  $("#toggle-preview").text("Disable Preview");
               }
           });
 
@@ -331,48 +324,64 @@
           }
 
           function onNodeClick(params) {
-              if ((Date.now() - clickTime) > 1000) {
-                  if (params.nodes.length === 1) {
-                      clickTime = Date.now();
-                      var node = params.nodes[0];
-                      currentNode = node;
-                      window.open(globalNetwork.body.nodes[node].options.url,
-                                  "_self");
-                      currentNode = node;
-                      // If we are in the buffer view,
-                      if (bufferContainer.style.display === "block") {
-                          drawBufferNetwork();
-                      }
+              if (params.nodes.length === 1) {
+                  var node = params.nodes[0];
+                  currentNode = node;
+                  window.open(globalNetwork.body.nodes[node].options.url,
+                              "_self");
+                  currentNode = node;
+
+                  // If we are in the buffer view
+                  if (bufferContainer.style.display === "block") {
+                      drawBufferNetwork();
                   }
               }
           }
 
+          var nodeHovered = true;
           function onNodeHover(params) {
               if (preview) {
+                  nodeHovered = true;
                   hoverNode.src = params.node.concat(".html");
-                  var pageWidth = $(window).width();
-                  var pageHeight = $(window).height();
-                  var hoverFrameWidth = $("#hoverframe").width();
-                  var hoverFrameHeight = $("#hoverframe").height();
-                  var hoverFrameX = params.event.clientX;
-                  var hoverFrameY = params.event.clientY;
-                  if ((hoverFrameX + hoverFrameWidth) > pageWidth) {
-                      hoverFrameX = hoverFrameX - hoverFrameWidth;
-                  }
-                  if ((hoverFrameY + hoverFrameHeight) > pageHeight) {
-                      hoverFrameY = hoverFrameY - hoverFrameHeight;
-                  }
+                  $('#hovernode').on('load', function() {
+                      if (nodeHovered) {
+                          var x = params.event.clientX;
+                          var y = params.event.clientY;
 
-                  var transformString =
-                      `translateX(${hoverFrameX}px)`+
-                      `translateY(${hoverFrameY}px)`;
-                  hoverFrame.style.webkitTransform = transformString;
-                  hoverFrame.style.MozTransform = transformString;
-                  hoverFrame.style.msTransform = transformString;
-                  hoverFrame.style.OTransform = transformString;
-                  hoverFrame.style.transform = transformString;
-                  hoverFrame.style.display = "block";
+                          $("#hovernode").width(
+                              Math.abs($(window).width()/2 - x) +
+                                  $(window).width()/2 - 50);
+                          $("#hovernode").height(
+                              Math.abs($(window).height()/2 - y) +
+                                  $(window).height()/2 - 50);
+
+                          // Check boundaries
+                          if ((x + $("#hovernode").width()) > $(window).width()) {
+                              x = x - $("#hovernode").width();
+                          }
+                          if ((y + $("#hovernode").height()) > $(window).height()) {
+                              y = y - $("#hovernode").height();
+                          }
+
+                          // Move previewFrame to the hovered node's position
+                          var transformString =
+                              `translateX(${x}px)`+
+                              `translateY(${y}px)`;
+                          previewFrame.style.webkitTransform = transformString;
+                          previewFrame.style.MozTransform = transformString;
+                          previewFrame.style.msTransform = transformString;
+                          previewFrame.style.OTransform = transformString;
+                          previewFrame.style.transform = transformString;
+
+                          previewFrame.style.display = "block";
+                      }
+                  });
               }
+          }
+
+          function onNodeBlur(params) {
+              nodeHovered = false;
+              previewFrame.style.display = "none";
           }
 
           function drawBufferNetwork() {
@@ -390,6 +399,7 @@
                   options);
               bufferNetwork.on("selectNode", onNodeClick);
               bufferNetwork.on("hoverNode", onNodeHover);
+              bufferNetwork.on("blurNode", onNodeBlur);
           }
 
           function drawGlobalNetwork() {
@@ -404,6 +414,7 @@
               globalNetwork = new vis.Network(globalContainer, data, options);
               globalNetwork.on("selectNode", onNodeClick);
               globalNetwork.on("hoverNode", onNodeHover);
+              globalNetwork.on("blurNode", onNodeBlur);
           }
       });
     </script>
