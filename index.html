@@ -61,6 +61,14 @@
           position: absolute;
       }
 
+      #reload-button {
+          position: absolute;
+          right:    0;
+          bottom:   0;
+          z-index: 5;
+      }
+
+
     </style>
 
   </head>
@@ -96,9 +104,13 @@
                      d-lg-block d-xl-block">File Viewer</span>
       </label>
     </div>
-    <label class="btn btn-sm btn-primary btn-simple" id="toggle-preview">
+    <button class="btn btn-sm btn-primary btn-simple" id="toggle-preview">
       Enable Preview
-    </label>
+    </button>
+    <button class="btn btn-primary btn-danger btn-sm" id="reload-button">
+      Reload
+    </button>
+
     <div id="global-network"></div>
     <div id="buffer-network"></div>
     <div class="fileframe" id="fileframe">
@@ -106,7 +118,6 @@
       <iframe src="" id="filenode"></iframe>
       <iframe src="" id="backlinks"></iframe>
     </div>
-
 
     <script type="text/javascript">
 
@@ -125,9 +136,7 @@
           return v;
       }
 
-      $(document).ready(function () {
-          var globalContainer = document.getElementById("global-network");
-          var bufferContainer = document.getElementById("buffer-network");
+      $(window).on("load", function () {
 
           var previewFrame = document.getElementById("preview-frame"); // div
           var hoverNode = document.getElementById("hovernode"); // iframe
@@ -141,133 +150,154 @@
           $("#fileframe").css("OTransform", transformString);
           $("#fileframe").css("transform", transformString);
 
-          function resizeFileViewer () {
+          function onWindowResize () {
               $("#filenode").width(($(window).width() - 50) * 0.7);
               $("#backlinks").width(($(window).width() - 50) * 0.3);
               $("#filenode").height($(window).height() - $("#view-menu").height() - 50);
               $("#backlinks").height($(window).height() - $("#view-menu").height() - 50);
+              $("#dropdownfiles").width($(window).width() * 0.25);
           };
-          resizeFileViewer();
-          window.onresize = resizeFileViewer;
+          onWindowResize();
+          window.onresize = onWindowResize;
+
+          $("#toggle-preview").css("display", "block");
+          $("#dropdownfiles").css("display", "none");
+          $("#fileframe").css("display", "none");
+          $("#global-network").css("display", "block");
+          $("#buffer-network").css("display", "none");
 
           $("#preview-frame").hover(
               function () {previewFrame.style.display = "block";},
               function () {previewFrame.style.display = "none";});
 
-          const graphSource = new EventSource("/graph-data");
-          const bufferSource = new EventSource("/current-roam-buffer");
-
-          var nodeDataset;
-          var edgeDataset;
-
           var globalNetwork;
-          var bufferNetwork;
-
           var currentNode;
-          var nodes;
-          var edges;
-          var data;
-
-          var oldGraphEventData = "";
-          var oldBufferEventData = "";
-
           var preview = false;
 
+          // Visjs network options
           var options = {
-              nodes: {
-                  shape: "dot",
-              },
+              nodes: {shape: "dot",},
               interaction:{hover:true}
           };
 
-          graphSource.onmessage = function (event) {
-              if (oldGraphEventData.localeCompare(event.data) != 0) {
-                  oldGraphEventData = event.data;
-                  data = JSON.parse(event.data);
-
-                  // Update Select2
-                  var select2Data = [];
-                  for (var i = 0 ; i < data.nodes.length; i++) {
-                      select2Data.push({id: data.nodes[i].id,
-                                        text: data.nodes[i].label,
-                                        path: data.nodes[i].path})
-                  }
-
-                  $(".dropdownfiles").select2({
-                      data: select2Data,
-                      placeholder: "File"
-                  });
-
-                  $('.dropdownfiles').on('select2:select', function (e) {
-                      $("#filenode").attr("src", e.params.data.id.concat(".html"));
-                  });
-                  $("#dropdownfiles").width($(window).width() * 0.25);
-
-                  $("#filenode").on("load", function () {
-                      var string = document.getElementById("filenode").contentWindow.location.href;
-                      string = string.substring(string.lastIndexOf('/') + 1);
-                      string = string.substring(0, string.lastIndexOf('.'));
-                      for (var i = 0; i < select2Data.length; i++) {
-                          if (select2Data[i].id === string) {
-                              var link = `org-roam-buffer?path=${select2Data[i].path}&label=${select2Data[i].text}`;
-                              break
-                          }
+          var currentBuffer;
+          var oldCurrentBufferData = "";
+          function setCurrentBufferSource () {
+              currentBuffer = new EventSource("/current-buffer-data");
+              currentBuffer.onmessage = function (event) {
+                  if (oldCurrentBufferData !== event.data) {
+                      currentNode = event.data;
+                      oldCurrentBufferData = event.data;
+                      if ($("#buffer-network").css("display") === "block") {
+                          drawBufferNetwork();
                       }
-                      $("#backlinks").attr("src", link);
-                      $('#backlinks').on('load', function() {
-                          var links = document.getElementById("backlinks")
-                              .contentWindow.document.getElementsByName("backlink");
-                          for (var i = 0; i < links.length; i++) {
-                              links[i].onclick = function () {
-                                  url = this.id.substring(0, this.id.lastIndexOf('.'));
-                                  url = url.concat(".html");
-                                  base_location = document.getElementById("filenode").contentWindow.location;
-                                  url = `${base_location.protocol}//${base_location.host}/${url}`
-                                  $("#filenode").attr("src", url);
-                              }
-                          }
-                      });
-
-                  });
-
-                  
-                  // Initialize Global Network
-                  updateNodesAndEdges();
-                  drawGlobalNetwork();
+                  }
               }
           }
+          setCurrentBufferSource();
 
-          bufferSource.onmessage = function (event) {
-              if (oldBufferEventData.localeCompare(event.data) != 0) {
-                  oldBufferEventData = event.data;
-                  currentNode = event.data;
-                  if (currentNode !== "") {
+          var roamData;
+          var roamSource;
+          function reload() {
+              $.get("/roam-data?force=1", function(data, status){
+                  console.log(`Connection to /roam-data: ${status}`);
+                  roamData = JSON.parse(data.substring(data.indexOf(':') + 1));
+                  update(roamData);
+
+                  roamSource = new EventSource("/roam-data");
+                  roamSource.onmessage = function (event) {
+                      var parsed_data = JSON.parse(event.data);
+                      roamData = parsed_data;
+                      update();
+                  }
+              });
+          }
+          reload();
+
+          $("#reload-button").click(function() {
+              roamSource.close()
+              reload();
+              currentBuffer.close()
+              setCurrentBufferSource();
+          });
+
+          function update () {
+              updateFileViewer();
+              updateNodesAndEdges();
+              drawGlobalNetwork();
+
+              if ($("#buffer-network").css("display") === "block") {
+                  if (currentNode) {
                       drawBufferNetwork();
                   }
               }
+          }
+
+          function updateFileViewer() {
+              var select2Data = [];
+              for (var i = 0 ; i < roamData.nodes.length; i++) {
+                  select2Data.push({id: roamData.nodes[i].id,
+                                    text: roamData.nodes[i].label,
+                                    path: roamData.nodes[i].path})
+              }
+
+              $(".dropdownfiles")
+                  .select2({
+                      data: select2Data,
+                      placeholder: "File"
+                  })
+                  .on('select2:select', function (e) {
+                      $("#filenode").attr("src", e.params.data.id.concat(".html"));
+                  })
+                  .width($(window).width() * 0.25);
+
+              $("#filenode").on("load", function () {
+                  var string = document.getElementById("filenode").contentWindow.location.href;
+                  string = string.substring(string.lastIndexOf('/') + 1);
+                  string = string.substring(0, string.lastIndexOf('.'));
+                  for (var i = 0; i < select2Data.length; i++) {
+                      if (select2Data[i].id === string) {
+                          var link = `org-roam-buffer?path=${select2Data[i].path}&label=${select2Data[i].text}`;
+                          break
+                      }
+                  }
+                  $("#backlinks").attr("src", link);
+                  $('#backlinks').on('load', function() {
+                      var links = document.getElementById("backlinks")
+                          .contentWindow.document.getElementsByName("backlink");
+                      for (var i = 0; i < links.length; i++) {
+                          links[i].onclick = function () {
+                              url = this.id.substring(0, this.id.lastIndexOf('.'));
+                              url = url.concat(".html");
+                              base_location = document.getElementById("filenode").contentWindow.location;
+                              url = `${base_location.protocol}//${base_location.host}/${url}`
+                              $("#filenode").attr("src", url);
+                          }
+                      }
+                  });
+              });
           }
 
           $("#globalview").click(function() {
               $("#toggle-preview").css("display", "block");
               $("#dropdownfiles").css("display", "none");
               $("#fileframe").css("display", "none");
-              globalContainer.style.display = "block";
-              bufferContainer.style.display = "none";
+              $("#global-network").css("display", "block");
+              $("#buffer-network").css("display", "none");
           });
-
           $("#bufferview").click(function() {
               $("#toggle-preview").css("display", "block");
               $("#dropdownfiles").css("display", "none");
               $("#fileframe").css("display", "none");
-              globalContainer.style.display = "none";
-              bufferContainer.style.display = "block";
+              $("#global-network").css("display", "none");
+              $("#buffer-network").css("display", "block");
               if (currentNode) {
                   drawBufferNetwork();
               }
           });
           $("#fileview").click(function() {
-              globalContainer.style.display = "none";
-              bufferContainer.style.display = "none";
+              $("#global-network").css("display", "none");
+              $("#buffer-network").css("display", "none");
               $("#toggle-preview").css("display", "none");
               $("#dropdownfiles").css("display", "block");
               $("#fileframe").css("display", "block");
@@ -282,22 +312,21 @@
               }
           });
 
-          function compareNodeValues(nodeId1, nodeId2) {
-              return nodes[nodeId1].value - nodes[nodeId2].value;
-          }
-
           function updateNodesAndEdges () {
-              globalNetwork = new vis.Network(globalContainer, data, options);
-              nodeDataset = new vis.DataSet(data.nodes);
-              edgeDataset = new vis.DataSet(data.edges);
-              nodes = nodeDataset.get({returnType:"Object"});
-              edges = edgeDataset.get({returnType:"Object"});
+              var globalContainer = document.getElementById("global-network");
+              globalNetwork = new vis.Network(globalContainer, roamData, options);
+              var nodeDataset = new vis.DataSet(roamData.nodes);
+              var nodes = nodeDataset.get({returnType:"Object"});
 
               // Set value depending on number of connected nodes
               for (var nodeId in nodes) {
                   var connectedNodes = globalNetwork.getConnectedNodes(nodeId)
                   var degree = connectedNodes.length;
                   nodes[nodeId].value = degree;
+              }
+
+              function compareNodeValues(nodeId1, nodeId2) {
+                  return nodes[nodeId1].value - nodes[nodeId2].value;
               }
 
               // Group the nodes
@@ -321,18 +350,24 @@
                       }
                   }
               }
+
+              var updateArray = [];
+              for (nodeId in nodes) {
+                  if (nodes.hasOwnProperty(nodeId)) {
+                      updateArray.push(nodes[nodeId]);
+                  }
+              }
+              roamData.nodes = updateArray;
           }
 
           function onNodeClick(params) {
               if (params.nodes.length === 1) {
                   var node = params.nodes[0];
-                  currentNode = node;
                   window.open(globalNetwork.body.nodes[node].options.url,
                               "_self");
                   currentNode = node;
-
-                  // If we are in the buffer view
-                  if (bufferContainer.style.display === "block") {
+                  // If we are in the buffer view, draw new node
+                  if ($("#buffer-network").css("display") === "block") {
                       drawBufferNetwork();
                   }
               }
@@ -385,17 +420,20 @@
           }
 
           function drawBufferNetwork() {
+              var nodeDataset = new vis.DataSet(roamData.nodes);
+              var nodes = nodeDataset.get({returnType:"Object"});
               var connectedNodes = globalNetwork.getConnectedNodes(currentNode);
-              bufferNodes = [nodes[currentNode]];
+              var bufferNodes = [nodes[currentNode]];
               for (var i = 0; i < connectedNodes.length; i++) {
                   if (connectedNodes[i] !== currentNode) {
                       bufferNodes.push(nodes[connectedNodes[i]]);
                   }
               }
-              var bufferNodeDataset = new vis.DataSet(bufferNodes);
+              var bufferContainer = document.getElementById("buffer-network");
               bufferNetwork = new vis.Network(
                   bufferContainer,
-                  {nodes:bufferNodeDataset, edges:edgeDataset},
+                  {nodes:bufferNodes,
+                   edges:roamData.edges},
                   options);
               bufferNetwork.on("selectNode", onNodeClick);
               bufferNetwork.on("hoverNode", onNodeHover);
@@ -403,15 +441,9 @@
           }
 
           function drawGlobalNetwork() {
-              var updateArray = [];
-              for (nodeId in nodes) {
-                  if (nodes.hasOwnProperty(nodeId)) {
-                      updateArray.push(nodes[nodeId]);
-                  }
-              }
-              nodeDataset.update(updateArray);
-              data = {nodes:nodeDataset, edges:edgeDataset}
-              globalNetwork = new vis.Network(globalContainer, data, options);
+              var globalContainer = document.getElementById("global-network");
+              globalNetwork = new vis.Network(
+                  globalContainer, roamData, options);
               globalNetwork.on("selectNode", onNodeClick);
               globalNetwork.on("hoverNode", onNodeHover);
               globalNetwork.on("blurNode", onNodeBlur);

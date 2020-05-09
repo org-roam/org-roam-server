@@ -43,12 +43,15 @@
 (require 'org-roam-buffer)
 
 ;;; Code:
+(defvar org-roam-server-export-style)
+
+(defvar org-roam-server-data nil)
 
 (defvar org-roam-server-current-buffer (window-buffer))
+
 (defun org-roam-server-update-current-buffer ()
   "Save the current buffer in a variable to serve to the server."
-  (setq org-roam-server-current-buffer
-        (window-buffer)))
+  (setq org-roam-server-current-buffer (window-buffer)))
 
 (defvar org-roam-server-root (concat (file-name-directory (or load-file-name buffer-file-name)) "."))
 (setq httpd-root org-roam-server-root)
@@ -59,14 +62,7 @@
      (let ((html-string))
        (with-temp-buffer
          (setq-local org-export-with-sub-superscripts nil)
-         (setq-local
-          org-html-style-default
-          (format "<style>%s</style>"
-                  (with-temp-buffer
-                    (insert-file-contents
-                     (concat org-roam-server-root
-                             "/assets/org.css"))
-                    (buffer-string))))
+         (setq-local org-html-style-default org-roam-server-export-style)
          (insert-file-contents ,file)
          (setq html-string (org-export-as 'html)))
        (insert html-string))))
@@ -93,7 +89,8 @@ This is added as a hook to `org-capture-after-finalize-hook'."
             `[:with selected :as [:select [file] :from ,node-query]
                     :select :distinct [file from] :from links
                     :inner :join refs :on (and (= links:to refs:ref)
-                                               (= links:type "cite"))
+                                               (= links:type "cite")
+                                               (= refs:type "cite"))
                     :where (and (in file selected) (in from selected))])
            (edges       (org-roam-db-query edges-query))
            (edges-cites (org-roam-db-query edges-cites-query))
@@ -136,6 +133,13 @@ This is added as a hook to `org-capture-after-finalize-hook'."
   :init-value nil
   (cond
    (org-roam-server-mode
+    (setq org-roam-server-export-style
+          (format "<style>%s</style>"
+                  (with-temp-buffer
+                    (insert-file-contents
+                     (concat org-roam-server-root
+                             "/assets/org.css"))
+                    (buffer-string))))
     (add-hook 'post-command-hook #'org-roam-server-find-file-hook-function)
     (add-hook 'org-capture-after-finalize-hook #'org-roam-server-capture-servlet)
     (httpd-start)
@@ -162,8 +166,8 @@ This is added as a hook to `org-capture-after-finalize-hook'."
     (add-hook 'post-command-hook #'org-roam-server-update-current-buffer nil t)
     (org-roam-server-update-current-buffer)))
 
-(defservlet current-roam-buffer text/event-stream (path)
-  (insert (format "data:%s\n\n"
+(defservlet current-buffer-data text/event-stream (path)
+  (insert (format "data: %s\n\n"
                   (if (org-roam--org-roam-file-p
                        (buffer-file-name org-roam-server-current-buffer))
                       (car (last
@@ -173,11 +177,14 @@ This is added as a hook to `org-capture-after-finalize-hook'."
                              "/")))
                     ""))))
 
-(defservlet graph-data text/event-stream (path)
+(defservlet* roam-data text/event-stream (force)
   (let* ((node-query `[:select [file titles]
                                :from titles
-                               ,@(org-roam-graph--expand-matcher 'file t)]))
-    (insert (format "data:%s\n\n" (org-roam-server-visjs-json node-query)))))
+                               ,@(org-roam-graph--expand-matcher 'file t)])
+         (data (org-roam-server-visjs-json node-query)))
+    (when (or force (not (string= data org-roam-server-data)))
+      (setq org-roam-server-data data)
+      (insert (format "data: %s\n\n" org-roam-server-data)))))
 
 (org-link-set-parameters "server" :export #'org-roam-server-export-server-id)
 
@@ -263,14 +270,7 @@ DESCRIPTION is the shown attribute to the user."
           (erase-buffer)
           (setq-local org-roam-directory source-org-roam-directory)
           (setq-local default-directory source-org-roam-directory)
-          (setq-local
-           org-html-style-default
-           (format "<style>%s</style>"
-                   (with-temp-buffer
-                     (insert-file-contents
-                      (concat org-roam-server-root
-                              "/assets/org.css"))
-                     (buffer-string))))
+          (setq-local org-html-style-default org-roam-server-export-style)
           (setq-local org-export-with-toc nil)
           (setq-local org-export-with-section-numbers nil)
           (setq-local org-export-with-sub-superscripts nil)
