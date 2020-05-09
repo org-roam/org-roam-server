@@ -34,6 +34,9 @@
 
 (require 'simple-httpd)
 (require 'json)
+(require 'subr-x)
+
+(require 'org)
 
 (require 'ox)
 (require 'ox-html)
@@ -58,7 +61,7 @@
 
 (defun org-roam-server-html-servlet (file)
   "Export the FILE to HTML and create a servlet for it."
-  `(defservlet ,(intern (concat (org-roam--path-to-slug file) ".html")) text/html (path)
+  `(defservlet* ,(intern (concat (org-roam--path-to-slug file) ".html")) text/html ()
      (let ((html-string))
        (with-temp-buffer
          (setq-local org-export-with-sub-superscripts nil)
@@ -166,7 +169,7 @@ This is added as a hook to `org-capture-after-finalize-hook'."
     (add-hook 'post-command-hook #'org-roam-server-update-current-buffer nil t)
     (org-roam-server-update-current-buffer)))
 
-(defservlet current-buffer-data text/event-stream (path)
+(defservlet* current-buffer-data text/event-stream ()
   (insert (format "data: %s\n\n"
                   (if (org-roam--org-roam-file-p
                        (buffer-file-name org-roam-server-current-buffer))
@@ -197,7 +200,7 @@ DESCRIPTION is the shown attribute to the user."
   (let ((desc (or description link)))
     (pcase format
       (`html (format "<a name=\"backlink\" id=\"%s\" href=\"javascript:void(0)\">%s</a>" link desc))
-      (t link))))
+      (_ link))))
 
 (defun org-roam-server-insert-title (title)
   "Insert the TITLE as `org-document-title`."
@@ -219,22 +222,16 @@ DESCRIPTION is the shown attribute to the user."
           (let ((file-from (car group))
                 (bls (cdr group)))
             (insert (format "** [[server:%s][%s]]\n"
-                            (first (last (split-string file-from "/")))
+                            (car (last (split-string file-from "/")))
                             (org-roam--get-title-or-slug file-from)))
-            (dolist (group grouped-backlinks)
-              (let ((file-from (car group))
-                    (bls (cdr group)))
-                (insert (format "** [[server:%s][%s]]\n"
-                                (first (last (split-string file-from "/")))
-                                (org-roam--get-title-or-slug file-from)))
-                (dolist (backlink bls)
-                  (pcase-let ((`(,file-from _ ,props) backlink))
-                    (insert (s-trim
-                             (s-replace "\n" " "
-                                        (s-replace
-                                         (format "file:%s" (file-truename org-roam-directory))
-                                         "server:" (plist-get props :content)))))
-                    (insert "\n\n"))))))))
+            (dolist (backlink bls)
+              (pcase-let ((`(_ _ ,props) backlink))
+                (insert (s-trim
+                         (s-replace "\n" " "
+                                    (s-replace
+                                     (format "file:%s" (file-truename org-roam-directory))
+                                     "server:" (plist-get props :content)))))
+                (insert "\n\n"))))))
     (insert "\n\n* No cite backlinks!")))
 
 (defun org-roam-server-insert-backlinks (file)
@@ -253,7 +250,7 @@ DESCRIPTION is the shown attribute to the user."
                                 (first (last (split-string file-from "/")))
                                 (org-roam--get-title-or-slug file-from)))
                 (dolist (backlink bls)
-                  (pcase-let ((`(,file-from _ ,props) backlink))
+                  (pcase-let ((`(_ _ ,props) backlink))
                     (insert (s-trim
                              (s-replace "\n" " "
                                         (s-replace
