@@ -247,7 +247,7 @@ DESCRIPTION is the shown attribute to the user."
               (let ((file-from (car group))
                     (bls (cdr group)))
                 (insert (format "** [[server:%s][%s]]\n"
-                                (first (last (split-string file-from "/")))
+                                (car (last (split-string file-from "/")))
                                 (org-roam--get-title-or-slug file-from)))
                 (dolist (backlink bls)
                   (pcase-let ((`(_ _ ,props) backlink))
