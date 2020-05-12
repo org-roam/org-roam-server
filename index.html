@@ -47,7 +47,8 @@
       }
 
       #view-menu {
-          position: relative;
+          position: absolute;
+          right: 0;
           z-index: 5;
       }
 
@@ -57,8 +58,18 @@
           z-index: 5;
       }
 
-      #toggle-preview {
+      #dropdownnodes {
+          display: none;
           position: absolute;
+          z-index: 5;
+          bottom: 0;
+          left: 0;
+      }
+
+      #toggle-preview {
+          position: relative;
+          float: left;
+          width: %50
       }
 
       #reload-button {
@@ -67,12 +78,8 @@
           bottom:   0;
           z-index: 5;
       }
-
-
     </style>
-
   </head>
-
   <body>
     <div id="dropdownfiles">
       <select class="dropdownfiles" name="files" style="width: 300px">
@@ -104,9 +111,16 @@
                      d-lg-block d-xl-block">File Viewer</span>
       </label>
     </div>
+
     <button class="btn btn-sm btn-primary btn-simple" id="toggle-preview">
       Enable Preview
     </button>
+    <div id="dropdownnodes">
+      <select class="dropdownnodes" name="files" style="width: 300px">
+        <option></option>
+      </select>
+    </div>
+
     <button class="btn btn-primary btn-danger btn-sm" id="reload-button">
       Reload
     </button>
@@ -156,12 +170,14 @@
               $("#filenode").height($(window).height() - $("#view-menu").height() - 50);
               $("#backlinks").height($(window).height() - $("#view-menu").height() - 50);
               $("#dropdownfiles").width($(window).width() * 0.25);
+              $("#dropdownnodes").width($(window).width() * 0.25);
           };
           onWindowResize();
           window.onresize = onWindowResize;
 
           $("#toggle-preview").css("display", "block");
           $("#dropdownfiles").css("display", "none");
+          $("#dropdownnodes").css("display", "none");
           $("#fileframe").css("display", "none");
           $("#global-network").css("display", "block");
           $("#buffer-network").css("display", "none");
@@ -221,8 +237,11 @@
               setCurrentBufferSource();
           });
 
+          var select2Data = [];
           function update () {
+              updateSelect2Data();
               updateFileViewer();
+              updateNodeSearch()
               updateNodesAndEdges();
               drawGlobalNetwork();
 
@@ -233,18 +252,33 @@
               }
           }
 
-          function updateFileViewer() {
-              var select2Data = [];
+          function updateSelect2Data() {
+              select2Data = [];
               for (var i = 0 ; i < roamData.nodes.length; i++) {
                   select2Data.push({id: roamData.nodes[i].id,
                                     text: roamData.nodes[i].label,
                                     path: roamData.nodes[i].path})
               }
+          }
 
+          function updateNodeSearch() {
+              $(".dropdownnodes")
+                  .select2({
+                      data: select2Data,
+                      placeholder: 'Node'
+                  })
+                  .on('select2:select', function (e) {
+                      currentNode = e.params.data.id;
+                      drawBufferNetwork();
+                  })
+                  .width($(window).width() * 0.25);
+          }
+
+          function updateFileViewer() {
               $(".dropdownfiles")
                   .select2({
                       data: select2Data,
-                      placeholder: "File"
+                      placeholder: 'File'
                   })
                   .on('select2:select', function (e) {
                       $("#filenode").attr("src", e.params.data.id.concat(".html"));
@@ -282,12 +316,14 @@
               $("#toggle-preview").css("display", "block");
               $("#dropdownfiles").css("display", "none");
               $("#fileframe").css("display", "none");
+              $("#dropdownnodes").css("display", "none");
               $("#global-network").css("display", "block");
               $("#buffer-network").css("display", "none");
           });
           $("#bufferview").click(function() {
               $("#toggle-preview").css("display", "block");
               $("#dropdownfiles").css("display", "none");
+              $("#dropdownnodes").css("display", "block");
               $("#fileframe").css("display", "none");
               $("#global-network").css("display", "none");
               $("#buffer-network").css("display", "block");
@@ -299,6 +335,7 @@
               $("#global-network").css("display", "none");
               $("#buffer-network").css("display", "none");
               $("#toggle-preview").css("display", "none");
+              $("#dropdownnodes").css("display", "none");
               $("#dropdownfiles").css("display", "block");
               $("#fileframe").css("display", "block");
           });
