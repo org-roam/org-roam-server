@@ -56,7 +56,12 @@
   "Save the current buffer in a variable to serve to the server."
   (setq org-roam-server-current-buffer (window-buffer)))
 
-(defvar org-roam-server-root (concat (file-name-directory (or load-file-name buffer-file-name)) "."))
+(defvar org-roam-server-root
+  (concat (file-name-directory
+           (file-truename (or
+                           load-file-name
+                           buffer-file-name)))
+          "."))
 (setq httpd-root org-roam-server-root)
 
 (defun org-roam-server-html-servlet (file)
