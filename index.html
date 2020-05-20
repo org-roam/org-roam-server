@@ -78,6 +78,14 @@
           bottom:   0;
           z-index: 5;
       }
+
+      #debug-button {
+          display: none;
+          position: absolute;
+          left:    0;
+          bottom:   0;
+          z-index: 5;
+      }
     </style>
   </head>
   <body>
@@ -123,6 +131,10 @@
 
     <button class="btn btn-primary btn-danger btn-sm" id="reload-button">
       Reload
+    </button>
+
+    <button class="btn btn-primary btn-danger btn-sm" id="debug-button">
+      Debug
     </button>
 
     <div id="global-network"></div>
@@ -186,15 +198,35 @@
               function () {previewFrame.style.display = "block";},
               function () {previewFrame.style.display = "none";});
 
-          var globalNetwork;
-          var currentNode;
-          var preview = false;
 
           // Visjs network options
           var options = {
               nodes: {shape: "dot",},
-              interaction:{hover:true}
+              interaction:{hover:true},
+              layout:{improvedLayout: true}
           };
+
+          // Initialize the network
+          // Any update to the dataset objects will update the Network
+          var nodeDataset = new vis.DataSet();
+          var edgeDataset = new vis.DataSet();
+
+          var globalNetwork = new vis.Network(document.getElementById("global-network"),
+                                              {nodes: nodeDataset,
+                                               edges: edgeDataset},
+                                              options);
+          globalNetwork.on("stabilized", onStabilized);
+          globalNetwork.on("selectNode", onNodeClick);
+          globalNetwork.on("hoverNode", onNodeHover);
+          globalNetwork.on("blurNode", onNodeBlur);
+
+          function onStabilized () {
+              // Update positions storage
+              localStorage.positions = JSON.stringify(globalNetwork.getPositions());
+          }
+
+          var currentNode;
+          var preview = false;
 
           var currentBuffer;
           var oldCurrentBufferData = "";
@@ -212,13 +244,20 @@
           }
           setCurrentBufferSource();
 
+          function debugFunction() {
+          }
+
+          $("#debug-button").click(function() {
+              debugFunction();
+          });
+
           var roamData;
           var roamSource;
           function reload() {
               $.get("/roam-data?force=1", function(data, status){
                   console.log(`Connection to /roam-data: ${status}`);
                   roamData = JSON.parse(data.substring(data.indexOf(':') + 1));
-                  update(roamData);
+                  update();
 
                   roamSource = new EventSource("/roam-data");
                   roamSource.onmessage = function (event) {
@@ -237,13 +276,9 @@
               setCurrentBufferSource();
           });
 
-          var select2Data = [];
           function update () {
-              updateSelect2Data();
-              updateFileViewer();
-              updateNodeSearch()
+              updateDropdown();
               updateNodesAndEdges();
-              drawGlobalNetwork();
 
               if ($("#buffer-network").css("display") === "block") {
                   if (currentNode) {
@@ -252,16 +287,15 @@
               }
           }
 
-          function updateSelect2Data() {
-              select2Data = [];
+          function updateDropdown() {
+              var select2Data = [];
               for (var i = 0 ; i < roamData.nodes.length; i++) {
                   select2Data.push({id: roamData.nodes[i].id,
                                     text: roamData.nodes[i].label,
                                     path: roamData.nodes[i].path})
               }
-          }
 
-          function updateNodeSearch() {
+              // Node search dropdown (Buffer Network View)
               $(".dropdownnodes")
                   .select2({
                       data: select2Data,
@@ -272,9 +306,8 @@
                       drawBufferNetwork();
                   })
                   .width($(window).width() * 0.25);
-          }
 
-          function updateFileViewer() {
+              // File search dropdown (File Viewer)
               $(".dropdownfiles")
                   .select2({
                       data: select2Data,
@@ -350,12 +383,29 @@
           });
 
           function updateNodesAndEdges () {
-              var globalContainer = document.getElementById("global-network");
-              globalNetwork = new vis.Network(globalContainer, roamData, options);
-              var nodeDataset = new vis.DataSet(roamData.nodes);
-              var nodes = nodeDataset.get({returnType:"Object"});
+              var tempDataset = new vis.DataSet(roamData.nodes);
+              nodeDataset.update(roamData.nodes);
+              edgeDataset.clear();
+              edgeDataset.update(roamData.edges);
+              var nodes = tempDataset.get({returnType:"Object"});
+              if (localStorage.positions) {
+                  var structuredPositions = []
+                  var positions = JSON.parse(localStorage.positions);
+                  for (var key in positions) {
+                      if (positions.hasOwnProperty(key)) {
+                          if (nodes[key]) { // Check if it is removed from the database
+                              structuredPositions.push({id: key,
+                                                        x: positions[key].x,
+                                                        y: positions[key].y});
+                          } else {
+                              nodeDataset.remove(key);
+                          }
+                      }
+                  }
+                  nodeDataset.update(structuredPositions);
+              }
 
-              // Set value depending on number of connected nodes
+              // Set value depending on the number of connected nodes
               for (var nodeId in nodes) {
                   var connectedNodes = globalNetwork.getConnectedNodes(nodeId)
                   var degree = connectedNodes.length;
@@ -388,12 +438,16 @@
                   }
               }
 
+              // Update the dataset
               var updateArray = [];
               for (nodeId in nodes) {
                   if (nodes.hasOwnProperty(nodeId)) {
                       updateArray.push(nodes[nodeId]);
                   }
               }
+              nodeDataset.update(updateArray);
+
+              // Keep roamData updated for buffer network
               roamData.nodes = updateArray;
           }
 
@@ -475,15 +529,6 @@
               bufferNetwork.on("selectNode", onNodeClick);
               bufferNetwork.on("hoverNode", onNodeHover);
               bufferNetwork.on("blurNode", onNodeBlur);
-          }
-
-          function drawGlobalNetwork() {
-              var globalContainer = document.getElementById("global-network");
-              globalNetwork = new vis.Network(
-                  globalContainer, roamData, options);
-              globalNetwork.on("selectNode", onNodeClick);
-              globalNetwork.on("hoverNode", onNodeHover);
-              globalNetwork.on("blurNode", onNodeBlur);
           }
       });
     </script>
