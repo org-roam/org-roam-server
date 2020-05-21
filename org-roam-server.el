@@ -109,7 +109,7 @@ This is added as a hook to `org-capture-after-finalize-hook'."
                (title (or (caadr (elt nodes idx))
                           (org-roam--path-to-slug file))))
           (push (list (cons 'id (org-roam--path-to-slug file))
-                      (cons 'label (xml-escape-string title))
+                      (cons 'label title)
                       (cons 'url (concat "org-protocol://roam-file?file="
                                          (url-hexify-string file)))
                       (cons 'path file))
