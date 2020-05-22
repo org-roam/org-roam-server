@@ -396,6 +396,18 @@
                       }
                   }
 
+                  var links = document.getElementById("filenode")
+                      .contentWindow.document.getElementsByTagName("a");
+                  for (var i = 0; i < links.length; i++) {
+                      links[i].onclick = function () {
+                          if (darkmode) {
+                              // Hide iframes until the page is loaded
+                              // to prevent flickering
+                              $("#fileframe").css("display", "none");
+                          }
+                      }
+                  }
+
                   $("#backlinks").attr("src", link);
                   $('#backlinks').on('load', function() {
                       var links = document.getElementById("backlinks")
@@ -406,6 +418,11 @@
                               url = url.concat(".html");
                               base_location = document.getElementById("filenode").contentWindow.location;
                               url = `${base_location.protocol}//${base_location.host}/${url}`
+                              if (darkmode) {
+                                  // Hide iframes until the page is loaded
+                                  // to prevent flickering
+                                  $("#fileframe").css("display", "none");
+                              }
                               $("#filenode").attr("src", url);
                           }
                       }
