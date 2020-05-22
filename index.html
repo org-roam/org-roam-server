@@ -20,6 +20,11 @@
           overflow: hidden;
           position: relative;
           z-index: 0;
+
+          -webkit-transition: background-color 500ms ease-out;
+          -moz-transition: background-color 500ms ease-out;
+          -o-transition: background-color 500ms ease-out;
+          transition: background-color 500ms ease-out;
       }
 
       #global-network, #buffer-network {
@@ -95,7 +100,20 @@
           display: inline-block;
           left: 50%;
           z-index: 5;
+
+          -webkit-transition: background-color 500ms ease-out;
+          -moz-transition: background-color 500ms ease-out;
+          -o-transition: background-color 500ms ease-out;
+          transition: background-color 500ms ease-out;
       }
+
+      .select2-container--default .select2-selection--single {
+          -webkit-transition: background-color 500ms ease-out;
+          -moz-transition: background-color 500ms ease-out;
+          -o-transition: background-color 500ms ease-out;
+          transition: background-color 500ms ease-out;
+      }
+
     </style>
   </head>
 
@@ -349,8 +367,15 @@
           }
 
           function iframeSetColor(id, background, h1color) {
-              document.getElementById(id)
-                  .contentDocument.body.style.backgroundColor  = background;
+              var iframe = document.getElementById(id).contentDocument.body;
+              var transition = "background-color 500ms ease-out"
+              iframe.style.webkitTransition = transition;
+              iframe.style.MozTransition = transition;
+              iframe.style.msTransition = transition;
+              iframe.style.OTransition = transition;
+              iframe.style.transition = transition;
+              iframe.style.backgroundColor  = background;
+
               var h1s = document.getElementById(id)
                   .contentDocument.getElementsByTagName("h1");
               for (var i = 0; i < h1s.length; i++) {
