@@ -3,11 +3,14 @@
   <head>
     <title>Org Roam Server</title>
     <link rel="stylesheet" href="assets/bootstrap.min.css">
+    <link rel="stylesheet" href="assets/bootstrap-toggle.min.css">
     <link rel="stylesheet" href="assets/select2.min.css">
-    <script src="assets/jquery-3.5.0.min.js"></script>
+    <script type="text/javascript" src="assets/jquery-3.5.0.min.js"></script>
     <script type="text/javascript" src="assets/vis-network.min.js"></script>
-    <script src="assets/bootstrap.min.js"></script>
-    <script src="assets/select2.min.js"></script>
+    <script type="text/javascript" src="assets/bootstrap.min.js"></script>
+    <script type="text/javascript" src="assets/select2.min.js"></script>
+    <script type="text/javascript" src="assets/bootstrap-toggle.min.js"></script>
+
     <style type="text/css">
       * { padding: 0; margin: 0; }
       html, body {
@@ -34,7 +37,7 @@
           z-index: 100;
       }
 
-      #fileframe{
+      #fileframe {
           display: none;
           position: absolute;
           z-index: 100;
@@ -86,8 +89,16 @@
           bottom:   0;
           z-index: 5;
       }
+
+      #colormode {
+          position: absolute;
+          display: inline-block;
+          left: 50%;
+          z-index: 5;
+      }
     </style>
   </head>
+
   <body>
     <div id="dropdownfiles">
       <select class="dropdownfiles" name="files" style="width: 300px">
@@ -99,6 +110,13 @@
       <iframe src="" id="hovernode">
       </iframe>
     </div>
+
+    <label class="checkbox-inline" id="colormode">
+      <input type="checkbox" data-toggle="toggle"
+             data-on="Light Mode" data-off="Dark Mode"
+             data-onstyle="default" data-offstyle="default"
+             data-size="small" id="colormode-checkbox">
+    </label>
 
     <div class="btn-group btn-group-toggle float-right" data-toggle="buttons" id="view-menu">
       <label class="btn btn-sm btn-primary btn-simple active" id="globalview">
@@ -163,7 +181,6 @@
       }
 
       $(window).on("load", function () {
-
           var previewFrame = document.getElementById("preview-frame"); // div
           var hoverNode = document.getElementById("hovernode"); // iframe
 
@@ -198,6 +215,39 @@
               function () {previewFrame.style.display = "block";},
               function () {previewFrame.style.display = "none";});
 
+          function select2Color(backgroundColor, color) {
+              $(".select2-container--default .select2-selection--single")
+                  .css("background-color", backgroundColor);
+              $(".select2-search--dropdown").css("background-color", backgroundColor);
+              $(".select2-search__field")
+                  .css({"background-color": backgroundColor, "color": color});
+              $(".select2-results").css("background-color", backgroundColor);
+          }
+
+          var darkmode = false;
+
+          $('#colormode-checkbox').change(function() {
+              if(this.checked) {
+                  document.body.style.backgroundColor = "black";
+                  darkmode = true;
+                  iframeSetColor("filenode", "black", "gray");
+                  iframeSetColor("backlinks", "black", "gray");
+                  select2Color("black", "gray")
+              } else {
+                  document.body.style.backgroundColor = "white";
+                  darkmode = false;
+                  iframeSetColor("filenode", "white", "black");
+                  iframeSetColor("backlinks", "white", "black");
+                  select2Color("white", "black")
+              }
+          })
+
+          $('#colormode-checkbox').change()
+
+          $(".dropdownfiles, .dropdownnodes").on("select2:open", function () {
+              if (darkmode) {select2Color("black", "gray");
+              } else {select2Color("white", "black");}
+          });
 
           // Visjs network options
           var options = {
@@ -215,6 +265,7 @@
                                               {nodes: nodeDataset,
                                                edges: edgeDataset},
                                               options);
+
           globalNetwork.on("stabilized", onStabilized);
           globalNetwork.on("selectNode", onNodeClick);
           globalNetwork.on("hoverNode", onNodeHover);
@@ -287,6 +338,17 @@
               }
           }
 
+          function iframeSetColor(id, background, h1color) {
+              document.getElementById(id)
+                  .contentDocument.body.style.backgroundColor  = background;
+              var h1s = document.getElementById(id)
+                  .contentDocument.getElementsByTagName("h1");
+              for (var i = 0; i < h1s.length; i++) {
+                  var h1 = h1s[i];
+                  h1.style.color = h1color;
+              }
+          }
+
           function updateDropdown() {
               var select2Data = [];
               for (var i = 0 ; i < roamData.nodes.length; i++) {
@@ -314,6 +376,11 @@
                       placeholder: 'File'
                   })
                   .on('select2:select', function (e) {
+                      if (darkmode) {
+                          // Hide iframes until the page is loaded
+                          // to prevent flickering
+                          $("#fileframe").css("display", "none");
+                      }
                       $("#filenode").attr("src", e.params.data.id.concat(".html"));
                   })
                   .width($(window).width() * 0.25);
@@ -328,6 +395,7 @@
                           break
                       }
                   }
+
                   $("#backlinks").attr("src", link);
                   $('#backlinks').on('load', function() {
                       var links = document.getElementById("backlinks")
@@ -340,6 +408,14 @@
                               url = `${base_location.protocol}//${base_location.host}/${url}`
                               $("#filenode").attr("src", url);
                           }
+                      }
+                      if (darkmode) {
+                          iframeSetColor("filenode", "black", "gray");
+                          iframeSetColor("backlinks", "black", "gray");
+                          $("#fileframe").css("display", "block");
+                      } else {
+                          iframeSetColor("filenode", "white", "black");
+                          iframeSetColor("backlinks", "white", "black");
                       }
                   });
               });
@@ -363,6 +439,8 @@
               if (currentNode) {
                   drawBufferNetwork();
               }
+              if (darkmode) {select2Color("black", "gray");
+              } else {select2Color("white", "black");}
           });
           $("#fileview").click(function() {
               $("#global-network").css("display", "none");
@@ -371,6 +449,8 @@
               $("#dropdownnodes").css("display", "none");
               $("#dropdownfiles").css("display", "block");
               $("#fileframe").css("display", "block");
+              if (darkmode) {select2Color("black", "gray");
+              } else {select2Color("white", "black");}
           });
           $("#toggle-preview").click(function() {
               if (preview) {
@@ -498,6 +578,9 @@
                           previewFrame.style.msTransform = transformString;
                           previewFrame.style.OTransform = transformString;
                           previewFrame.style.transform = transformString;
+
+                          if (darkmode) {iframeSetColor("hovernode", "black", "gray");
+                          } else {iframeSetColor("hovernode", "white", "black");}
 
                           previewFrame.style.display = "block";
                       }

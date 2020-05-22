@@ -44,3 +44,4 @@ For Javascript and CSS libraries please refer to;
 - https://github.com/twbs/bootstrap/blob/master/LICENSE
 - https://github.com/gongzhitaao/orgcss
 - https://github.com/select2/select2
+- https://github.com/minhur/bootstrap-toggle/blob/master/LICENSE
