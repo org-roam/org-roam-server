@@ -275,7 +275,7 @@
                   darkmode = false;
                   iframeSetColor("filenode", "white", "black");
                   iframeSetColor("backlinks", "white", "black");
-                  select2Color("black", "white")
+                  select2Color("white", "black")
                   globalNetwork.setOptions({nodes: {font: { color: "black" }}});
                   if ($("#buffer-network").css("display") === "block") {
                       bufferNetwork.setOptions({nodes: {font: { color: "black" }}});
@@ -285,7 +285,7 @@
 
           $(".dropdownfiles, .dropdownnodes").on("select2:open", function () {
               if (darkmode) {select2Color("#1d1e20", "#c7cec6");
-              } else {select2Color("black", "white");}
+              } else {select2Color("white", "black");}
           });
 
           // Visjs network options
@@ -388,8 +388,8 @@
               iframe.style.OTransition = transition;
               iframe.style.transition = transition;
               iframe.style.backgroundColor  = background;
-              iframe.style.color = color;
 
+              iframe.style.color = color;
               var h1s = document.getElementById(id)
                   .contentDocument.getElementsByTagName("h1");
               for (var i = 0; i < h1s.length; i++) {
@@ -507,11 +507,11 @@
                   if (darkmode) {
                       bufferNetwork.setOptions({nodes: {font: { color: "#c7cec6" }}});
                   } else {
-                      bufferNetwork.setOptions({nodes: {font: { color: "white" }}});
+                      bufferNetwork.setOptions({nodes: {font: { color: "black" }}});
                   }
               }
               if (darkmode) {select2Color("#1d1e20", "#c7cec6");
-              } else {select2Color("black", "white");}
+              } else {select2Color("white", "black");}
           });
           $("#fileview").click(function() {
               $("#global-network").css("display", "none");
@@ -521,7 +521,7 @@
               $("#dropdownfiles").css("display", "block");
               $("#fileframe").css("display", "block");
               if (darkmode) {select2Color("#1d1e20", "#c7cec6");
-              } else {select2Color("black", "white");}
+              } else {select2Color("white", "black");}
           });
           $("#toggle-preview").click(function() {
               if (preview) {
@@ -651,7 +651,7 @@
                           previewFrame.style.transform = transformString;
 
                           if (darkmode) {iframeSetColor("hovernode", "#1d1e20", "#c7cec6");
-                          } else {iframeSetColor("hovernode", "black", "white");}
+                          } else {iframeSetColor("hovernode", "white", "black");}
 
                           previewFrame.style.display = "block";
                       }
