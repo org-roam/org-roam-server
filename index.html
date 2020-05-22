@@ -158,7 +158,7 @@
     <div id="global-network"></div>
     <div id="buffer-network"></div>
     <div class="fileframe" id="fileframe">
-      <button class="btn btn-link float-left" id="iframe-button" onclick="history.back()">Back</button>
+      <button class="btn btn-link float-left" id="iframe-button">Back</button>
       <iframe src="" id="filenode"></iframe>
       <iframe src="" id="backlinks"></iframe>
     </div>
@@ -192,6 +192,16 @@
           $("#fileframe").css("msTransform", transformString);
           $("#fileframe").css("OTransform", transformString);
           $("#fileframe").css("transform", transformString);
+
+          $("#fileframe #iframe-button")
+              .on("click", function iframeGoBack() {
+                  if (darkmode) {
+                      // Hide iframes until the page is loaded
+                      // to prevent flickering
+                      $("#fileframe").css("display", "none");
+                  }
+                  window.history.back()
+              });
 
           function onWindowResize () {
               $("#filenode").width(($(window).width() - 50) * 0.7);
