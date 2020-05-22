@@ -504,11 +504,6 @@
               $("#buffer-network").css("display", "block");
               if (currentNode) {
                   drawBufferNetwork();
-                  if (darkmode) {
-                      bufferNetwork.setOptions({nodes: {font: { color: "#c7cec6" }}});
-                  } else {
-                      bufferNetwork.setOptions({nodes: {font: { color: "black" }}});
-                  }
               }
               if (darkmode) {select2Color("#1d1e20", "#c7cec6");
               } else {select2Color("white", "black");}
@@ -683,6 +678,12 @@
               bufferNetwork.on("selectNode", onNodeClick);
               bufferNetwork.on("hoverNode", onNodeHover);
               bufferNetwork.on("blurNode", onNodeBlur);
+
+              if (darkmode) {
+                  bufferNetwork.setOptions({nodes: {font: { color: "#c7cec6" }}});
+              } else {
+                  bufferNetwork.setOptions({nodes: {font: { color: "black" }}});
+              }
           }
       });
     </script>
