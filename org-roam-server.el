@@ -68,15 +68,15 @@
 (setq httpd-root org-roam-server-root)
 
 (defcustom org-roam-server-label-wrap-length 20
-  "Maximum character length of the labels in the network for each line."
+  "Maximum character length of labels in the network for each line."
   :type 'integer)
 
 (defcustom org-roam-server-label-truncate t
-  "Truncate labels if it exceeds `org-roam-server-label-truncate-length`."
+  "Truncate label if it exceeds `org-roam-server-label-truncate-length`."
   :type 'boolean)
 
 (defcustom org-roam-server-label-truncate-length 60
-  "Maximum character length of the labels in the network."
+  "Maximum character length of labels in the network."
   :type 'integer)
 
 (defun org-roam-server-html-servlet (file)
