@@ -3,7 +3,7 @@
 ;; Author: Göktuğ Karakaşlı <karakasligk@gmail.com>
 ;; URL: https://github.com/goktug97/org-roam-server
 ;; Version: 1.0.1
-;; Package-Requires: ((org-roam "1.1.1") (org "9.3") (emacs "26.1") (simple-httpd "1.5.1"))
+;; Package-Requires: ((org-roam "1.1.1") (org "9.3") (emacs "26.1") (simple-httpd "1.5.1") (s "1.12.0"))
 
 ;; MIT License
 
@@ -32,9 +32,11 @@
 ;; Use M-x org-roam-server-mode RET to enable the global mode.
 ;; It will start a web server on http://127.0.0.1:8080
 
-(require 'simple-httpd)
 (require 'json)
 (require 'subr-x)
+
+(require 's)
+(require 'simple-httpd)
 
 (require 'org)
 
@@ -46,6 +48,7 @@
 (require 'org-roam-buffer)
 
 ;;; Code:
+
 (defvar org-roam-server-export-style)
 
 (defvar org-roam-server-data nil)
@@ -63,6 +66,18 @@
                            buffer-file-name)))
           "."))
 (setq httpd-root org-roam-server-root)
+
+(defcustom org-roam-server-label-wrap-length 20
+  "Maximum character length of the labels in the network for each line."
+  :type 'integer)
+
+(defcustom org-roam-server-label-truncate t
+  "Truncate labels if it exceeds `org-roam-server-label-truncate-length`."
+  :type 'boolean)
+
+(defcustom org-roam-server-label-truncate-length 60
+  "Maximum character length of the labels in the network."
+  :type 'integer)
 
 (defun org-roam-server-html-servlet (file)
   "Export the FILE to HTML and create a servlet for it."
@@ -109,7 +124,12 @@ This is added as a hook to `org-capture-after-finalize-hook'."
                (title (or (caadr (elt nodes idx))
                           (org-roam--path-to-slug file))))
           (push (list (cons 'id (org-roam--path-to-slug file))
-                      (cons 'label title)
+                      (cons 'label (s-word-wrap
+                                    org-roam-server-label-wrap-length
+                                    (if org-roam-server-label-truncate
+                                        (s-truncate
+                                         org-roam-server-label-truncate-length title)
+                                      title)))
                       (cons 'url (concat "org-protocol://roam-file?file="
                                          (url-hexify-string file)))
                       (cons 'path file))
