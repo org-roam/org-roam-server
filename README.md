@@ -27,9 +27,9 @@ clicking the `reload` button which will reload the data, rebuild the
 graph and refresh connections.
 
 ## Org-Roam Protocol
-The graph utilizes org-roam protocol. Which means if you click on one of the nodes,
-it will open the corresponding file in Emacs. For this future to work, org-roam protocol
-should be configured in the system. 
+The graph utilizes org-roam protocol which means if you click on one
+of the nodes, it will open the corresponding file in Emacs. For this
+feature to work, org-roam protocol should be configured in the system.
 
 [Configuring Org-Roam Protocol](https://org-roam.readthedocs.io/en/develop/roam_protocol/)
 
