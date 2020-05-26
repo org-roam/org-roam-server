@@ -67,6 +67,11 @@
           "."))
 (setq httpd-root org-roam-server-root)
 
+(defcustom org-roam-server-port 8080
+  "Server port.
+127.0.0.1:`org-roam-server-port`."
+  :type 'integer)
+
 (defcustom org-roam-server-label-wrap-length 20
   "Maximum character length of labels in the network for each line."
   :type 'integer)
@@ -170,6 +175,7 @@ This is added as a hook to `org-capture-after-finalize-hook'."
                     (buffer-string))))
     (add-hook 'post-command-hook #'org-roam-server-find-file-hook-function)
     (add-hook 'org-capture-after-finalize-hook #'org-roam-server-capture-servlet)
+    (setq-local httpd-port org-roam-server-port)
     (httpd-start)
     (let ((node-query `[:select [file titles] :from titles
                                 ,@(org-roam-graph--expand-matcher 'file t)]))
