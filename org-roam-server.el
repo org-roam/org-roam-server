@@ -34,6 +34,7 @@
 
 (require 'json)
 (require 'subr-x)
+(require 'url)
 
 (require 's)
 (require 'simple-httpd)
@@ -49,15 +50,11 @@
 
 ;;; Code:
 
-(defvar org-roam-server-export-style)
-
 (defvar org-roam-server-data nil)
 
 (defvar org-roam-server-current-buffer (window-buffer))
 
-(defun org-roam-server-update-current-buffer ()
-  "Save the current buffer in a variable to serve to the server."
-  (setq org-roam-server-current-buffer (window-buffer)))
+(defvar org-roam-server-token)
 
 (defvar org-roam-server-root
   (concat (file-name-directory
@@ -65,28 +62,69 @@
                            load-file-name
                            buffer-file-name)))
           "."))
-(setq httpd-root org-roam-server-root)
+
+(defgroup org-roam-server nil
+  "org-roam-server customizable variables."
+  :group 'org-roam)
+
+(defcustom org-roam-server-host "localhost"
+  "Server host.
+http://`org-roam-server-host`:`org-roam-server-port`."
+  :group 'org-roam-server
+  :type 'string)
 
 (defcustom org-roam-server-port 8080
   "Server port.
-127.0.0.1:`org-roam-server-port`."
+http://127.0.0.1:`org-roam-server-port`."
+  :group 'org-roam-server
   :type 'integer)
 
 (defcustom org-roam-server-label-wrap-length 20
   "Maximum character length of labels in the network for each line."
+  :group 'org-roam-server
   :type 'integer)
 
 (defcustom org-roam-server-label-truncate t
   "Truncate label if it exceeds `org-roam-server-label-truncate-length`."
+  :group 'org-roam-server
   :type 'boolean)
 
 (defcustom org-roam-server-label-truncate-length 60
   "Maximum character length of labels in the network."
+  :group 'org-roam-server
   :type 'integer)
+
+(defcustom org-roam-server-authenticate nil
+  "Enable authentication."
+  :group 'org-roam-server
+  :type 'boolean)
+
+(defcustom org-roam-server-export-style
+  (format "<style>%s</style>"
+          (with-temp-buffer
+            (insert-file-contents
+             (concat org-roam-server-root
+                     "/assets/org.css"))
+            (buffer-string)))
+  "HTML export style in css format."
+  :group 'org-roam-server
+  :type 'string)
+
+(defun org-roam-server-random-token (length)
+  "Create a random token with length of `LENGTH`."
+  (with-temp-buffer
+    (dotimes (_ length)
+     (insert
+      (let ((x (random 36)))
+        (if (< x 10) (+ x ?0) (+ x (- ?a 10))))))
+    (buffer-string)))
 
 (defun org-roam-server-html-servlet (file)
   "Export the FILE to HTML and create a servlet for it."
-  `(defservlet* ,(intern (concat (org-roam--path-to-slug file) ".html")) text/html ()
+  `(defservlet* ,(intern (concat (org-roam--path-to-slug file) ".html")) text/html (token)
+     (if org-roam-server-authenticate
+         (if (not (string= org-roam-server-token token))
+             (httpd-error httpd-current-proc 403)))
      (let ((html-string))
        (with-temp-buffer
          (setq-local org-export-with-sub-superscripts nil)
@@ -157,25 +195,69 @@ This is added as a hook to `org-capture-after-finalize-hook'."
                 (cdr (elt graph 1)))))
       (json-encode graph))))
 
+(defun org-roam-server-update-current-buffer ()
+  "Save the current buffer in a variable to serve to the server."
+  (setq org-roam-server-current-buffer (window-buffer)))
+
+(defun org-roam-server-export-server-id (link description format)
+  "Custom export setting for backlinks.
+Use LINK as an id in the <a> html tag instead
+of href as it is used in another window.
+The setting only applies to HTML FORMAT.
+DESCRIPTION is the shown attribute to the user."
+  (let ((desc (or description link)))
+    (pcase format
+      (`html (format "<a name=\"backlink\" id=\"%s\" href=\"javascript:void(0)\">%s</a>" link desc))
+      (_ link))))
+
+(defun org-roam-server-export-file-id (link description format)
+  "Append token to the file links.
+LINK is appended to the `org-roam-server-token`.
+The setting only applies to HTML FORMAT.
+DESCRIPTION is the shown attribute to the user."
+  (let ((desc (or description link)))
+    (pcase format
+      (`html
+       (let ((html-link (concat (file-name-sans-extension link) ".html")))
+         (if org-roam-server-authenticate
+             (format "<a href=%s?token=%s>%s</a>" html-link org-roam-server-token desc)
+           (format "<a href=%s>%s</a>" html-link desc))))
+      (_ link))))
 
 ;;;###autoload
 (define-minor-mode org-roam-server-mode
   "Start the http server and serve org-roam files."
   :lighter ""
   :global t
+  :group 'org-roam
   :init-value nil
   (cond
    (org-roam-server-mode
-    (setq org-roam-server-export-style
-          (format "<style>%s</style>"
-                  (with-temp-buffer
-                    (insert-file-contents
-                     (concat org-roam-server-root
-                             "/assets/org.css"))
-                    (buffer-string))))
+    (if org-roam-server-authenticate
+        (progn
+          (setq org-roam-server-token (org-roam-server-random-token 64))
+          (switch-to-buffer-other-window "*org-roam-server*")
+          (with-current-buffer "*org-roam-server*"
+            (erase-buffer)
+            (insert "* Org Roam Server\n")
+            (insert "`org-roam-server-authenticate` is enabled. To open the web application please go to;\n")
+            (insert
+             (url-recreate-url
+              (url-parse-make-urlobj
+               "http" nil nil
+               org-roam-server-host
+               org-roam-server-port
+               (format "?token=%s" org-roam-server-token)
+               nil nil t)))
+            (org-mode)
+            (outline-show-all))))
     (add-hook 'post-command-hook #'org-roam-server-find-file-hook-function)
     (add-hook 'org-capture-after-finalize-hook #'org-roam-server-capture-servlet)
+    (org-link-set-parameters "server" :export #'org-roam-server-export-server-id)
+    (org-link-set-parameters "file" :export #'org-roam-server-export-file-id)
     (setq-local httpd-port org-roam-server-port)
+    (setq-local httpd-host org-roam-server-host)
+    (setq httpd-root org-roam-server-root)
     (httpd-start)
     (let ((node-query `[:select [file titles] :from titles
                                 ,@(org-roam-graph--expand-matcher 'file t)]))
@@ -200,7 +282,10 @@ This is added as a hook to `org-capture-after-finalize-hook'."
     (add-hook 'post-command-hook #'org-roam-server-update-current-buffer nil t)
     (org-roam-server-update-current-buffer)))
 
-(defservlet* current-buffer-data text/event-stream ()
+(defservlet* current-buffer-data text/event-stream (token)
+  (if org-roam-server-authenticate
+      (if (not (string= org-roam-server-token token))
+          (httpd-error httpd-current-proc 403)))
   (insert (format "data: %s\n\n"
                   (if (org-roam--org-roam-file-p
                        (buffer-file-name org-roam-server-current-buffer))
@@ -211,7 +296,10 @@ This is added as a hook to `org-capture-after-finalize-hook'."
                              "/")))
                     ""))))
 
-(defservlet* roam-data text/event-stream (force)
+(defservlet* roam-data text/event-stream (force token)
+  (if org-roam-server-authenticate
+      (if (not (string= org-roam-server-token token))
+          (httpd-error httpd-current-proc 403)))
   (let* ((node-query `[:select [file titles]
                                :from titles
                                ,@(org-roam-graph--expand-matcher 'file t)])
@@ -219,19 +307,6 @@ This is added as a hook to `org-capture-after-finalize-hook'."
     (when (or force (not (string= data org-roam-server-data)))
       (setq org-roam-server-data data)
       (insert (format "data: %s\n\n" org-roam-server-data)))))
-
-(org-link-set-parameters "server" :export #'org-roam-server-export-server-id)
-
-(defun org-roam-server-export-server-id (link description format)
-  "Custom export setting for backlinks.
-Use LINK as an id in the <a> html tag instead
-of href as it is used in another window.
-The setting only applies to HTML FORMAT.
-DESCRIPTION is the shown attribute to the user."
-  (let ((desc (or description link)))
-    (pcase format
-      (`html (format "<a name=\"backlink\" id=\"%s\" href=\"javascript:void(0)\">%s</a>" link desc))
-      (_ link))))
 
 (defun org-roam-server-insert-title (title)
   "Insert the TITLE as `org-document-title`."
@@ -290,7 +365,10 @@ DESCRIPTION is the shown attribute to the user."
                     (insert "\n\n"))))))
         (insert "\n\n* No backlinks!"))))
 
-(defservlet* org-roam-buffer text/html (path label)
+(defservlet* org-roam-buffer text/html (path label token)
+  (if org-roam-server-authenticate
+      (if (not (string= org-roam-server-token token))
+          (httpd-error httpd-current-proc 403)))
   (if (and path label)
       (let ((source-org-roam-directory org-roam-directory)
             (html-string))

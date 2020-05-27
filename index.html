@@ -199,6 +199,9 @@
           return v;
       }
 
+      var urlParams = new URLSearchParams(window.location.search);
+      var token = urlParams.get('token');
+
       $(window).on("load", function () {
           var previewFrame = document.getElementById("preview-frame"); // div
           var hoverNode = document.getElementById("hovernode"); // iframe
@@ -323,7 +326,7 @@
           var currentBuffer;
           var oldCurrentBufferData = "";
           function setCurrentBufferSource () {
-              currentBuffer = new EventSource("/current-buffer-data");
+              currentBuffer = new EventSource(`/current-buffer-data?token=${token}`);
               currentBuffer.onmessage = function (event) {
                   if (oldCurrentBufferData !== event.data) {
                       currentNode = event.data;
@@ -346,12 +349,12 @@
           var roamData;
           var roamSource;
           function reload() {
-              $.get("/roam-data?force=1", function(data, status){
+              $.get(`/roam-data?force=1&token=${token}`, function(data, status){
                   console.log(`Connection to /roam-data: ${status}`);
                   roamData = JSON.parse(data.substring(data.indexOf(':') + 1));
                   update();
 
-                  roamSource = new EventSource("/roam-data");
+                  roamSource = new EventSource(`/roam-data?token=${token}`);
                   roamSource.onmessage = function (event) {
                       var parsed_data = JSON.parse(event.data);
                       roamData = parsed_data;
@@ -430,7 +433,7 @@
                           // to prevent flickering
                           $("#fileframe").css("display", "none");
                       }
-                      $("#filenode").attr("src", e.params.data.id.concat(".html"));
+                      $("#filenode").attr("src", e.params.data.id.concat(`.html?token=${token}`));
                   })
                   .width($(window).width() * 0.25);
 
@@ -440,7 +443,7 @@
                   string = string.substring(0, string.lastIndexOf('.'));
                   for (var i = 0; i < select2Data.length; i++) {
                       if (select2Data[i].id === string) {
-                          var link = `org-roam-buffer?path=${select2Data[i].path}&label=${select2Data[i].text}`;
+                          var link = `org-roam-buffer?path=${select2Data[i].path}&label=${select2Data[i].text}&token=${token}`;
                           break
                       }
                   }
@@ -466,7 +469,7 @@
                               url = this.id.substring(0, this.id.lastIndexOf('.'));
                               url = url.concat(".html");
                               base_location = document.getElementById("filenode").contentWindow.location;
-                              url = `${base_location.protocol}//${base_location.host}/${url}`
+                              url = `${base_location.protocol}//${base_location.host}/${url}?token=${token}`
                               if (darkmode) {
                                   // Hide iframes until the page is loaded
                                   // to prevent flickering
@@ -614,7 +617,7 @@
           function onNodeHover(params) {
               if (preview) {
                   nodeHovered = true;
-                  hoverNode.src = params.node.concat(".html");
+                  hoverNode.src = params.node.concat(`.html?token=${token}`);
                   $('#hovernode').on('load', function() {
                       if (nodeHovered) {
                           var x = params.event.clientX;
