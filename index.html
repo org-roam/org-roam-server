@@ -258,13 +258,19 @@
               $(".select2-results").css("background-color", backgroundColor);
           }
 
-          var darkmode = false;
+          var darkmode;
+          if (localStorage.darkmode) {
+              $('#colormode-checkbox').bootstrapToggle('on')
+          } else {
+              $('#colormode-checkbox').bootstrapToggle('off')
+          }
 
           $('#colormode-checkbox').change(function() {
               if(this.checked) {
                   document.body.style.backgroundColor = "#1d1e20";
                   document.body.style.color = "#c7cec6";
                   darkmode = true;
+                  localStorage.darkmode = true;
                   iframeSetColor("filenode", "#1d1e20", "#c7cec6");
                   iframeSetColor("backlinks", "#1d1e20", "#c7cec6");
                   select2Color("#1d1e20", "#c7cec6")
@@ -276,6 +282,7 @@
                   document.body.style.backgroundColor = "white";
                   document.body.style.color = "black";
                   darkmode = false;
+                  localStorage.darkmode = false;
                   iframeSetColor("filenode", "white", "black");
                   iframeSetColor("backlinks", "white", "black");
                   select2Color("white", "black")

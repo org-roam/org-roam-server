@@ -67,7 +67,7 @@
   "org-roam-server customizable variables."
   :group 'org-roam)
 
-(defcustom org-roam-server-host "localhost"
+(defcustom org-roam-server-host "127.0.0.1"
   "Server host.
 http://`org-roam-server-host`:`org-roam-server-port`."
   :group 'org-roam-server
