@@ -167,6 +167,7 @@ This is added as a hook to `org-capture-after-finalize-hook'."
                (title (or (caadr (elt nodes idx))
                           (org-roam--path-to-slug file))))
           (push (list (cons 'id (org-roam--path-to-slug file))
+                      (cons 'title title)
                       (cons 'label (s-word-wrap
                                     org-roam-server-label-wrap-length
                                     (if org-roam-server-label-truncate
