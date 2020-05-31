@@ -230,7 +230,7 @@ DESCRIPTION is the shown attribute to the user."
   "Start the http server and serve org-roam files."
   :lighter ""
   :global t
-  :group 'org-roam
+  :group 'org-roam-server
   :init-value nil
   (cond
    (org-roam-server-mode
