@@ -12,7 +12,14 @@ org-roam-server
 
 ```elisp
 (use-package org-roam-server
-  :ensure t)
+  :ensure t
+  :config
+  (setq org-roam-server-host "127.0.0.1"
+        org-roam-server-port 8080
+        org-roam-server-authenticate nil
+        org-roam-server-label-truncate t
+        org-roam-server-label-truncate-length 60
+        org-roam-server-label-wrap-length 20))
 ```
 
 ## Usage
