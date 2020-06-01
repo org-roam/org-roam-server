@@ -137,7 +137,7 @@ http://127.0.0.1:`org-roam-server-port`."
   "Create a servlet for the recently captured `org-roam` file.
 This is added as a hook to `org-capture-after-finalize-hook'."
   (when (and (not org-note-abort))
-    (let ((file (org-roam-capture--get :file-path)))
+    (if-let ((file (org-roam-capture--get :file-path)))
       (eval (org-roam-server-html-servlet file)))))
 
 (defun org-roam-server-visjs-json (node-query)
