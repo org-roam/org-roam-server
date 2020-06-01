@@ -136,9 +136,7 @@ http://127.0.0.1:`org-roam-server-port`."
 (defun org-roam-server-capture-servlet ()
   "Create a servlet for the recently captured `org-roam` file.
 This is added as a hook to `org-capture-after-finalize-hook'."
-  (when (and (not org-note-abort)
-             (eq (org-roam-capture--get :capture-fn)
-                 'org-roam-insert))
+  (when (and (not org-note-abort))
     (let ((file (org-roam-capture--get :file-path)))
       (eval (org-roam-server-html-servlet file)))))
 
