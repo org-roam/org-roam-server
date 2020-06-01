@@ -444,6 +444,9 @@
                   })
                   .width($(window).width() * 0.25);
 
+              if (darkmode) {select2Color("#1d1e20", "#c7cec6");
+              } else {select2Color("white", "black");}
+
               $("#filenode").on("load", function () {
                   var string = document.getElementById("filenode").contentWindow.location.href;
                   string = string.substring(string.lastIndexOf('/') + 1);
