@@ -217,10 +217,11 @@ DESCRIPTION is the shown attribute to the user."
   (let ((desc (or description link)))
     (pcase format
       (`html
-       (let ((html-link (concat (file-name-sans-extension link) ".html")))
-         (if org-roam-server-authenticate
-             (format "<a href=%s?token=%s>%s</a>" html-link org-roam-server-token desc)
-           (format "<a href=%s>%s</a>" html-link desc))))
+       (if (org-roam--org-roam-file-p link)
+           (let ((html-link (concat (file-name-sans-extension link) ".html")))
+             (if org-roam-server-authenticate
+                 (format "<a href=%s?token=%s>%s</a>" html-link org-roam-server-token desc)
+               (format "<a href=%s>%s</a>" html-link desc)))))
       (_ link))))
 
 ;;;###autoload
