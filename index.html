@@ -37,6 +37,10 @@
           color: #c7cec6 !important;
       }
 
+      #temp-network {
+          display: none;
+      }
+
       #preview-frame{
           display: none;
           position: absolute;
@@ -68,6 +72,14 @@
       }
 
       #dropdownnodes {
+          display: none;
+          position: absolute;
+          z-index: 5;
+          bottom: 0;
+          left: 0;
+      }
+
+      #dropdownfilters {
           display: none;
           position: absolute;
           z-index: 5;
@@ -161,7 +173,13 @@
       Enable Preview
     </button>
     <div id="dropdownnodes">
-      <select class="dropdownnodes" name="files" style="width: 300px">
+      <select class="dropdownnodes" name="nodes" style="width: 300px">
+        <option></option>
+      </select>
+    </div>
+
+    <div id="dropdownfilters">
+      <select class="dropdownfilters" name="tags" style="width: 300px" multiple="multiple">
         <option></option>
       </select>
     </div>
@@ -176,6 +194,7 @@
 
     <div id="global-network"></div>
     <div id="buffer-network"></div>
+    <div id="temp-network"></div>
     <div class="fileframe" id="fileframe">
       <button class="btn btn-link float-left" id="iframe-button">Back</button>
       <iframe src="" id="filenode"></iframe>
@@ -234,6 +253,7 @@
               $("#backlinks").height($(window).height() - $("#view-menu").height() - 50);
               $("#dropdownfiles").width($(window).width() * 0.25);
               $("#dropdownnodes").width($(window).width() * 0.25);
+              $("#dropdownfilters").width($(window).width() * 0.25);
           };
           onWindowResize();
           window.onresize = onWindowResize;
@@ -241,6 +261,7 @@
           $("#toggle-preview").css("display", "block");
           $("#dropdownfiles").css("display", "none");
           $("#dropdownnodes").css("display", "none");
+          $("#dropdownfilters").css("display", "block");
           $("#fileframe").css("display", "none");
           $("#global-network").css("display", "block");
           $("#buffer-network").css("display", "none");
@@ -252,10 +273,16 @@
           function select2Color(backgroundColor, color) {
               $(".select2-container--default .select2-selection--single")
                   .css("background-color", backgroundColor);
+              $(".select2-container--default .select2-selection--multiple")
+                  .css("background-color", backgroundColor);
               $(".select2-search--dropdown").css("background-color", backgroundColor);
               $(".select2-search__field")
                   .css({"background-color": backgroundColor, "color": color});
               $(".select2-results").css("background-color", backgroundColor);
+              $(".select2-container--default .select2-selection--multiple .select2-selection__choice")
+                  .css("background-color", backgroundColor);
+              $(".select2-container--default .select2-results__option[aria-selected=\"true\"]")
+                  .css("background-color", backgroundColor);
           }
 
           var darkmode;
@@ -293,7 +320,7 @@
               }
           })
 
-          $(".dropdownfiles, .dropdownnodes").on("select2:open", function () {
+          $(".dropdownfiles, .dropdownnodes, .dropdownfilters").on("select2:open", function () {
               if (darkmode) {select2Color("#1d1e20", "#c7cec6");
               } else {select2Color("white", "black");}
           });
@@ -305,15 +332,45 @@
               layout:{improvedLayout: true}
           };
 
+          var tags;
+
           // Initialize the network
           // Any update to the dataset objects will update the Network
           var nodeDataset = new vis.DataSet();
           var edgeDataset = new vis.DataSet();
 
+          var filters = new Set();
+          var view = new vis.DataView(nodeDataset, {
+              filter: function (item) {
+                  if (filters.size > 0) {
+                      if (item.tags) {
+                          tags = new Set(item.tags);
+                          for (let filter of filters.values()) {
+                              var parsed_filter = JSON.parse(filter);
+                              if (parsed_filter.parent === "tags"){
+                                  if (!tags.has(parsed_filter.id)) {
+                                      return false;
+                                  }
+                              }
+                          }
+                      } else {
+                          return false;
+                      }
+                  }
+                  return true;
+              }
+          });
+
           globalNetwork = new vis.Network(document.getElementById("global-network"),
-                                          {nodes: nodeDataset,
+                                          {nodes: view,
                                            edges: edgeDataset},
                                           options);
+
+          var tempNetwork = new vis.Network(document.getElementById("temp-network"),
+                                            {nodes: nodeDataset,
+                                             edges: edgeDataset},
+                                            {layout:{improvedLayout: false},
+                                             physics:{enabled: false}});
 
           globalNetwork.on("stabilized", onStabilized);
           globalNetwork.on("selectNode", onNodeClick);
@@ -324,7 +381,9 @@
 
           function onStabilized () {
               // Update positions storage
-              localStorage.positions = JSON.stringify(globalNetwork.getPositions());
+              if (filters.size == 0) { // Save only if it is full network
+                  localStorage.positions = JSON.stringify(globalNetwork.getPositions());
+              }
           }
 
           var currentNode;
@@ -379,8 +438,8 @@
           });
 
           function update () {
-              updateDropdown();
               updateNodesAndEdges();
+              updateDropdown();
 
               if ($("#buffer-network").css("display") === "block") {
                   if (currentNode) {
@@ -444,6 +503,31 @@
                   })
                   .width($(window).width() * 0.25);
 
+              var select2Filters = [{id: "tags", text: "Tags", children: []}];
+              tags.forEach(function (tag) {
+                  select2Filters[0].children.push({id: tag,
+                                                   text: tag,
+                                                   parent: "tags"})
+              });
+              $(".dropdownfilters")
+                  .select2({
+                      data: select2Filters,
+                      placeholder: "Filter"
+                  })
+                  .on('select2:select', function (e) {
+                      if (darkmode) {select2Color("#1d1e20", "#c7cec6");
+                      } else {select2Color("white", "black");}
+                      filters.add(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
+                      view.refresh()
+                  })
+                  .on('select2:unselect', function (e) {
+                      if (darkmode) {select2Color("#1d1e20", "#c7cec6");
+                      } else {select2Color("white", "black");}
+                      filters.delete(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
+                      view.refresh()
+                  })
+                  .width($(window).width() * 0.25);
+
               if (darkmode) {select2Color("#1d1e20", "#c7cec6");
               } else {select2Color("white", "black");}
 
@@ -503,6 +587,7 @@
           $("#globalview").click(function() {
               $("#toggle-preview").css("display", "block");
               $("#dropdownfiles").css("display", "none");
+              $("#dropdownfilters").css("display", "block");
               $("#fileframe").css("display", "none");
               $("#dropdownnodes").css("display", "none");
               $("#global-network").css("display", "block");
@@ -511,6 +596,7 @@
           $("#bufferview").click(function() {
               $("#toggle-preview").css("display", "block");
               $("#dropdownfiles").css("display", "none");
+              $("#dropdownfilters").css("display", "none");
               $("#dropdownnodes").css("display", "block");
               $("#fileframe").css("display", "none");
               $("#global-network").css("display", "none");
@@ -527,6 +613,7 @@
               $("#toggle-preview").css("display", "none");
               $("#dropdownnodes").css("display", "none");
               $("#dropdownfiles").css("display", "block");
+              $("#dropdownfilters").css("display", "none");
               $("#fileframe").css("display", "block");
               if (darkmode) {select2Color("#1d1e20", "#c7cec6");
               } else {select2Color("white", "black");}
@@ -565,10 +652,17 @@
               }
 
               // Set value depending on the number of connected nodes
+              // Also construct a set of tags
+              tags = new Set();
               for (var nodeId in nodes) {
                   var connectedNodes = globalNetwork.getConnectedNodes(nodeId)
                   var degree = connectedNodes.length;
                   nodes[nodeId].value = degree;
+                  if (nodes[nodeId].tags) {
+                      for (var i=0; i < nodes[nodeId].tags.length; i++ ) {
+                          tags.add(nodes[nodeId].tags[i]);
+                      }
+                  }
               }
 
               function compareNodeValues(nodeId1, nodeId2) {
@@ -675,7 +769,7 @@
           function drawBufferNetwork() {
               var nodeDataset = new vis.DataSet(roamData.nodes);
               var nodes = nodeDataset.get({returnType:"Object"});
-              var connectedNodes = globalNetwork.getConnectedNodes(currentNode);
+              var connectedNodes = tempNetwork.getConnectedNodes(currentNode);
               var bufferNodes = [nodes[currentNode]];
               for (var i = 0; i < connectedNodes.length; i++) {
                   if (connectedNodes[i] !== currentNode) {

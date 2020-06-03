@@ -163,9 +163,11 @@ This is added as a hook to `org-capture-after-finalize-hook'."
       (dotimes (idx (length nodes))
         (let* ((file (xml-escape-string (car (elt nodes idx))))
                (title (or (caadr (elt nodes idx))
-                          (org-roam--path-to-slug file))))
+                          (org-roam--path-to-slug file)))
+               (tags (elt (elt nodes idx) 2)))
           (push (list (cons 'id (org-roam--path-to-slug file))
                       (cons 'title title)
+                      (cons 'tags tags)
                       (cons 'label (s-word-wrap
                                     org-roam-server-label-wrap-length
                                     (if org-roam-server-label-truncate
@@ -300,9 +302,9 @@ DESCRIPTION is the shown attribute to the user."
   (if org-roam-server-authenticate
       (if (not (string= org-roam-server-token token))
           (httpd-error httpd-current-proc 403)))
-  (let* ((node-query `[:select [file titles]
-                               :from titles
-                               ,@(org-roam-graph--expand-matcher 'file t)])
+  (let* ((node-query `[:select [titles:file titles tags] :from titles
+                               ,@(org-roam-graph--expand-matcher 'file t)
+                               :left :outer :join tags :on (= titles:file tags:file)])
          (data (org-roam-server-visjs-json node-query)))
     (when (or force (not (string= data org-roam-server-data)))
       (setq org-roam-server-data data)
