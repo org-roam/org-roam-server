@@ -303,7 +303,7 @@ DESCRIPTION is the shown attribute to the user."
           (httpd-error httpd-current-proc 403)))
   (let* ((node-query `[:select [titles:file titles tags] :from titles
                                :left :outer :join tags :on (= titles:file tags:file)
-                               ,@(org-roam-graph--expand-matcher 'titles:file t) ])
+                               ,@(org-roam-graph--expand-matcher 'titles:file t)])
          (data (org-roam-server-visjs-json node-query)))
     (when (or force (not (string= data org-roam-server-data)))
       (setq org-roam-server-data data)
