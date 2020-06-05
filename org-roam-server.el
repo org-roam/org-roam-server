@@ -99,6 +99,11 @@ http://127.0.0.1:`org-roam-server-port`."
   :group 'org-roam-server
   :type 'boolean)
 
+(defcustom org-roam-server-export-inline-images t
+  "Show inline images in the viewer when `t`."
+  :group 'org-roam-server
+  :type 'boolean)
+
 (defcustom org-roam-server-export-style
   (format "<style>%s</style>"
           (with-temp-buffer
@@ -130,6 +135,21 @@ http://127.0.0.1:`org-roam-server-port`."
          (setq-local org-export-with-sub-superscripts nil)
          (setq-local org-html-style-default org-roam-server-export-style)
          (insert-file-contents ,file)
+         ;; Handle images
+         (if org-roam-server-export-inline-images
+             (let* ((file-string (buffer-string))
+                    (matches (s-match-strings-all "\\[\\[\\(file:\\)\\(.*\\.\\(png\\|jpg\\|jpeg\\|gif\\|svg\\)\\)\\]\\(\\[.*\\]\\)?\\]" file-string)))
+               (dolist (match matches)
+                 (let ((path (elt match 2))
+                       (link (elt match 0)))
+                   (unless (file-name-absolute-p path)
+                     (setq path (concat (file-name-directory ,file) path)))
+                   (setq path (file-truename path))
+                   (if (file-exists-p path)
+                       (setq file-string
+                             (s-replace link (format "[[image:%s]]" path) file-string)))))
+               (erase-buffer)
+               (insert file-string)))
          (setq html-string (org-export-as 'html)))
        (insert html-string))))
 
@@ -208,22 +228,49 @@ The setting only applies to HTML FORMAT.
 DESCRIPTION is the shown attribute to the user."
   (let ((desc (or description link)))
     (pcase format
-      (`html (format "<a name=\"backlink\" id=\"%s\" href=\"javascript:void(0)\">%s</a>" link desc))
+      (`html
+       (format "<a name=\"backlink\" id=\"%s\" href=\"javascript:void(0)\">%s</a>"
+               link desc))
       (_ link))))
+
+(defun org-roam-server-inline-image-servlet (link)
+  "Create servlet in the server for the given image LINK."
+  (let ((ext (cadr (s-match (cdar org-html-inline-image-rules) link))))
+    `(defservlet* ,(intern (secure-hash 'sha256 link)) ,(httpd-get-mime ext) (token)
+       (if org-roam-server-authenticate
+           (if (not (string= org-roam-server-token token))
+               (httpd-error httpd-current-proc 403)))
+       (insert-file-contents ,link))))
 
 (defun org-roam-server-export-file-id (link description format)
   "Append token to the file links.
-LINK is appended to the `org-roam-server-token`.
+`org-roam-server-token` is appended to the LINK.
 The setting only applies to HTML FORMAT.
 DESCRIPTION is the shown attribute to the user."
   (let ((desc (or description link)))
     (pcase format
       (`html
-       (if (org-roam--org-roam-file-p link)
-           (let ((html-link (concat (file-name-sans-extension link) ".html")))
-             (if org-roam-server-authenticate
-                 (format "<a href=%s?token=%s>%s</a>" html-link org-roam-server-token desc)
-               (format "<a href=%s>%s</a>" html-link desc))))))))
+       (when (org-roam--org-roam-file-p link)
+         (let ((html-link (concat (file-name-sans-extension link) ".html")))
+           (if org-roam-server-authenticate
+               (format "<a href=%s?token=%s>%s</a>"
+                       html-link org-roam-server-token desc)
+             (format "<a href=%s>%s</a>" html-link desc))))))))
+
+(defun org-roam-server-export-image-id (link description format)
+  "Create servlet for the image links.
+`org-roam-server-token` is appended to the LINK.
+The setting only applies to HTML FORMAT.
+DESCRIPTION is the shown attribute to the user if the image is not rendered."
+  (let ((desc (or description link)))
+    (pcase format
+      (`html
+       (eval (org-roam-server-inline-image-servlet link))
+       (let ((html-link (secure-hash 'sha256 link)))
+         (if org-roam-server-authenticate
+             (format "<img src=%s?token=%s alt=%s />"
+                     html-link org-roam-server-token desc)
+           (format "<img src=%s alt=%s />" html-link desc)))))))
 
 ;;;###autoload
 (define-minor-mode org-roam-server-mode
@@ -241,7 +288,8 @@ DESCRIPTION is the shown attribute to the user."
           (with-current-buffer "*org-roam-server*"
             (erase-buffer)
             (insert "* Org Roam Server\n")
-            (insert "`org-roam-server-authenticate` is enabled. To open the web application please go to;\n")
+            (insert "`org-roam-server-authenticate` is enabled.")
+            (insert "To open the web application please go to;\n")
             (insert
              (url-recreate-url
               (url-parse-make-urlobj
@@ -256,6 +304,7 @@ DESCRIPTION is the shown attribute to the user."
     (add-hook 'org-capture-after-finalize-hook #'org-roam-server-capture-servlet)
     (org-link-set-parameters "server" :export #'org-roam-server-export-server-id)
     (org-link-set-parameters "file" :export #'org-roam-server-export-file-id)
+    (org-link-set-parameters "image" :export #'org-roam-server-export-image-id)
     (setq-local httpd-port org-roam-server-port)
     (setq-local httpd-host org-roam-server-host)
     (setq httpd-root org-roam-server-root)
