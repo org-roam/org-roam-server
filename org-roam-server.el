@@ -163,7 +163,7 @@ This is added as a hook to `org-capture-after-finalize-hook'."
 (defun org-roam-server-visjs-json (node-query)
   "Convert `org-roam` NODE-QUERY db query to the visjs json format."
   (org-roam-db--ensure-built)
-  (org-roam--with-temp-buffer
+  (org-roam--with-temp-buffer nil
     (let* ((nodes (org-roam-db-query node-query))
            (edges-query
             `[:with selected :as [:select [file] :from ,node-query]
@@ -311,7 +311,7 @@ DESCRIPTION is the shown attribute to the user if the image is not rendered."
     (httpd-start)
     (let ((node-query `[:select [file titles] :from titles
                                 ,@(org-roam-graph--expand-matcher 'file t)]))
-      (org-roam--with-temp-buffer
+      (org-roam--with-temp-buffer nil
         (let ((nodes (org-roam-db-query node-query)))
           (dotimes (idx (length nodes))
             (let ((file (xml-escape-string (car (elt nodes idx)))))
