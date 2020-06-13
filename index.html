@@ -79,6 +79,23 @@
           left: 0;
       }
 
+      #formdistance {
+          display: none;
+          position: absolute;
+          z-index: 5;
+          bottom: 0;
+          left: 310px;
+      }
+
+      #formdistance label {
+          margin-bottom: 0;
+      }
+
+      .darkmode #inputdistance {
+          color: #c7cec6;
+          background-color: #1d1e20;
+      }
+
       #dropdownfilters {
           display: none;
           position: absolute;
@@ -178,6 +195,11 @@
       </select>
     </div>
 
+    <div id="formdistance">
+      <label for="distance">Distance: </label>
+      <input id="inputdistance" name="distance" type="number" style="width: 50px" value="1" min="0" pattern="\d+" />
+    </div>
+
     <div id="dropdownfilters">
       <select class="dropdownfilters" name="tags" style="width: 300px" multiple="multiple">
         <option></option>
@@ -261,6 +283,7 @@
           $("#toggle-preview").css("display", "block");
           $("#dropdownfiles").css("display", "none");
           $("#dropdownnodes").css("display", "none");
+          $("#formdistance").css("display", "none");
           $("#dropdownfilters").css("display", "block");
           $("#fileframe").css("display", "none");
           $("#global-network").css("display", "block");
@@ -292,6 +315,7 @@
 
           $('#colormode-checkbox').change(function() {
               if(this.checked) {
+                  $(document.body).addClass("darkmode");
                   document.body.style.backgroundColor = "#1d1e20";
                   document.body.style.color = "#c7cec6";
                   darkmode = true;
@@ -304,6 +328,7 @@
                       bufferNetwork.setOptions({nodes: {font: { color: "#c7cec6" }}});
                   }
               } else {
+                  $(document.body).removeClass("darkmode");
                   document.body.style.backgroundColor = "white";
                   document.body.style.color = "black";
                   darkmode = false;
@@ -590,6 +615,7 @@
               $("#dropdownfilters").css("display", "block");
               $("#fileframe").css("display", "none");
               $("#dropdownnodes").css("display", "none");
+              $("#formdistance").css("display", "none");
               $("#global-network").css("display", "block");
               $("#buffer-network").css("display", "none");
           });
@@ -598,6 +624,7 @@
               $("#dropdownfiles").css("display", "none");
               $("#dropdownfilters").css("display", "none");
               $("#dropdownnodes").css("display", "block");
+              $("#formdistance").css("display", "block");
               $("#fileframe").css("display", "none");
               $("#global-network").css("display", "none");
               $("#buffer-network").css("display", "block");
@@ -612,6 +639,7 @@
               $("#buffer-network").css("display", "none");
               $("#toggle-preview").css("display", "none");
               $("#dropdownnodes").css("display", "none");
+              $("#formdistance").css("display", "none");
               $("#dropdownfiles").css("display", "block");
               $("#dropdownfilters").css("display", "none");
               $("#fileframe").css("display", "block");
@@ -627,6 +655,7 @@
                   $("#toggle-preview").text("Disable Preview");
               }
           });
+          $("#inputdistance").on("input", drawBufferNetwork);
 
           function updateNodesAndEdges () {
               var tempDataset = new vis.DataSet(roamData.nodes);
@@ -766,15 +795,36 @@
               previewFrame.style.display = "none";
           }
 
+          function collectConnectedNodes(allNodes, baseNode, distance, alreadyConnected) {
+              if (distance < 1) {
+                  return new Set([baseNode]); // base case for recursion
+              }
+
+              var connectedNodes = new Set([baseNode]);
+              var neighbours = tempNetwork.getConnectedNodes(baseNode);
+
+              for (var i = 0; i < neighbours.length; i++) {
+                  // Skip this node if we've already seen it. Helps with performance. I think this is
+                  // safe: If we've already seen a node, the distance when we saw it originally must
+                  // have been at least as high as it is now, so we would have done at least as much
+                  // traversal as we're skipping.
+                  if (alreadyConnected && alreadyConnected.has(neighbours[i])) continue;
+                  var neighbourConnectedNodes = collectConnectedNodes(allNodes, neighbours[i], distance - 1, connectedNodes);
+                  for (var node of neighbourConnectedNodes) {
+                      connectedNodes.add(node);
+                  }
+              }
+
+              return connectedNodes;
+          }
+
           function drawBufferNetwork() {
               var nodeDataset = new vis.DataSet(roamData.nodes);
               var nodes = nodeDataset.get({returnType:"Object"});
-              var connectedNodes = tempNetwork.getConnectedNodes(currentNode);
-              var bufferNodes = [nodes[currentNode]];
+              var connectedNodes = Array.from(collectConnectedNodes(nodes, currentNode, parseInt(document.getElementById('inputdistance').value)));
+              var bufferNodes = [];
               for (var i = 0; i < connectedNodes.length; i++) {
-                  if (connectedNodes[i] !== currentNode) {
-                      bufferNodes.push(nodes[connectedNodes[i]]);
-                  }
+                  bufferNodes.push(nodes[connectedNodes[i]]);
               }
               var bufferContainer = document.getElementById("buffer-network");
               bufferNetwork = new vis.Network(
