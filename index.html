@@ -68,27 +68,38 @@
       #dropdownfiles {
           display: none;
           position: absolute;
+          width: 25%;
           z-index: 5;
       }
 
-      #dropdownnodes {
-          display: none;
-          position: absolute;
-          z-index: 5;
+      #controls {
+          position: fixed;
           bottom: 0;
           left: 0;
+          right: 0;
+          max-height: 40px;
+          display: flex;
+          z-index: 5;
+      }
+
+      #dropdownnodes, #dropdownfilters {
+          display: none;
+          align-self: flex-start;
+          width: 25%;
       }
 
       #formdistance {
           display: none;
-          position: absolute;
-          z-index: 5;
-          bottom: 0;
-          left: 310px;
+          align-self: flex-start;
+          margin-left: 10px;
       }
 
       #formdistance label {
           margin-bottom: 0;
+      }
+
+      #inputdistance {
+          width: 50px;
       }
 
       .darkmode #inputdistance {
@@ -96,25 +107,14 @@
           background-color: #1d1e20;
       }
 
-      #dropdownfilters {
-          display: none;
-          position: absolute;
-          z-index: 5;
-          bottom: 0;
-          left: 0;
+      #reload-button {
+          margin-left: auto;
       }
 
       #toggle-preview {
           position: relative;
           float: left;
           width: %50
-      }
-
-      #reload-button {
-          position: absolute;
-          right:    0;
-          bottom:   0;
-          z-index: 5;
       }
 
       #debug-button {
@@ -149,7 +149,7 @@
 
   <body>
     <div id="dropdownfiles">
-      <select class="dropdownfiles" name="files" style="width: 300px">
+      <select class="dropdownfiles" name="files" style="width: 100%;">
         <option></option>
       </select>
     </div>
@@ -189,26 +189,26 @@
     <button class="btn btn-sm btn-primary btn-simple" id="toggle-preview">
       Enable Preview
     </button>
-    <div id="dropdownnodes">
-      <select class="dropdownnodes" name="nodes" style="width: 300px">
-        <option></option>
-      </select>
-    </div>
 
-    <div id="formdistance">
-      <label for="distance">Distance: </label>
-      <input id="inputdistance" name="distance" type="number" style="width: 50px" value="1" min="0" pattern="\d+" />
+    <div id="controls">
+      <div id="dropdownfilters">
+        <select class="dropdownfilters" name="tags" multiple="multiple" style="width: 100%;">
+          <option></option>
+        </select>
+      </div>
+      <div id="dropdownnodes">
+        <select class="dropdownnodes" name="nodes" style="width: 100%;">
+          <option></option>
+        </select>
+      </div>
+      <div id="formdistance">
+        <label for="distance">Distance: </label>
+        <input id="inputdistance" name="distance" type="number" value="1" min="0" pattern="\d+" />
+      </div>
+      <button class="btn btn-primary btn-danger btn-sm" id="reload-button">
+        Reload
+      </button>
     </div>
-
-    <div id="dropdownfilters">
-      <select class="dropdownfilters" name="tags" style="width: 300px" multiple="multiple">
-        <option></option>
-      </select>
-    </div>
-
-    <button class="btn btn-primary btn-danger btn-sm" id="reload-button">
-      Reload
-    </button>
 
     <button class="btn btn-primary btn-danger btn-sm" id="debug-button">
       Debug
@@ -273,9 +273,6 @@
               $("#backlinks").width(($(window).width() - 50) * 0.3);
               $("#filenode").height($(window).height() - $("#view-menu").height() - 50);
               $("#backlinks").height($(window).height() - $("#view-menu").height() - 50);
-              $("#dropdownfiles").width($(window).width() * 0.25);
-              $("#dropdownnodes").width($(window).width() * 0.25);
-              $("#dropdownfilters").width($(window).width() * 0.25);
           };
           onWindowResize();
           window.onresize = onWindowResize;
@@ -502,19 +499,20 @@
               $(".dropdownnodes")
                   .select2({
                       data: select2Data,
-                      placeholder: 'Node'
+                      placeholder: 'Node',
+                      width: 'resolve'
                   })
                   .on('select2:select', function (e) {
                       currentNode = e.params.data.id;
                       drawBufferNetwork();
-                  })
-                  .width($(window).width() * 0.25);
+                  });
 
               // File search dropdown (File Viewer)
               $(".dropdownfiles")
                   .select2({
                       data: select2Data,
-                      placeholder: 'File'
+                      placeholder: 'File',
+                      width: 'resolve'
                   })
                   .on('select2:select', function (e) {
                       if (darkmode) {
@@ -523,8 +521,7 @@
                           $("#fileframe").css("display", "none");
                       }
                       $("#filenode").attr("src", e.params.data.id.concat(`.html?token=${token}`));
-                  })
-                  .width($(window).width() * 0.25);
+                  });
 
               var select2Filters = [{id: "tags", text: "Tags", children: []}];
               tags.forEach(function (tag) {
@@ -537,7 +534,8 @@
               $(".dropdownfilters")
                   .select2({
                       data: select2Filters,
-                      placeholder: "Filter"
+                      placeholder: "Filter",
+                      width: 'resolve'
                   })
                   .on('select2:select', function (e) {
                       if (darkmode) {select2Color("#1d1e20", "#c7cec6");
@@ -550,8 +548,7 @@
                       } else {select2Color("white", "black");}
                       filters.delete(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
                       view.refresh()
-                  })
-                  .width($(window).width() * 0.25);
+                  });
 
               if (darkmode) {select2Color("#1d1e20", "#c7cec6");
               } else {select2Color("white", "black");}
