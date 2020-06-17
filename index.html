@@ -144,6 +144,18 @@
           transition: background-color 500ms ease-out;
       }
 
+      .darkmode .select2-container--default .select2-selection--single,
+      .darkmode .select2-container--default .select2-selection--multiple,
+      .darkmode .select2-search--dropdown,
+      .darkmode .select2-results,
+      .darkmode .select2-container--default .select2-selection--multiple .select2-selection__choice {
+          background-color: #1d1e20;
+       }
+
+       .darkmode .select2-search__field {
+           background-color: #1d1e20;
+           color: #c7cec6 ;
+       }
     </style>
   </head>
 
@@ -290,19 +302,6 @@
               function () {previewFrame.style.display = "block";},
               function () {previewFrame.style.display = "none";});
 
-          function select2Color(backgroundColor, color) {
-              $(".select2-container--default .select2-selection--single")
-                  .css("background-color", backgroundColor);
-              $(".select2-container--default .select2-selection--multiple")
-                  .css("background-color", backgroundColor);
-              $(".select2-search--dropdown").css("background-color", backgroundColor);
-              $(".select2-search__field")
-                  .css({"background-color": backgroundColor, "color": color});
-              $(".select2-results").css("background-color", backgroundColor);
-              $(".select2-container--default .select2-selection--multiple .select2-selection__choice")
-                  .css("background-color", backgroundColor);
-          }
-
           var darkmode;
           if (localStorage.darkmode === "true") {
               $('#colormode-checkbox').bootstrapToggle('on')
@@ -319,7 +318,6 @@
                   localStorage.darkmode = true;
                   iframeSetColor("filenode", "#1d1e20", "#c7cec6");
                   iframeSetColor("backlinks", "#1d1e20", "#c7cec6");
-                  select2Color("#1d1e20", "#c7cec6")
                   globalNetwork.setOptions({nodes: {font: { color: "#c7cec6" }}});
                   if ($("#buffer-network").css("display") === "block") {
                       bufferNetwork.setOptions({nodes: {font: { color: "#c7cec6" }}});
@@ -332,18 +330,12 @@
                   localStorage.darkmode = false;
                   iframeSetColor("filenode", "white", "black");
                   iframeSetColor("backlinks", "white", "black");
-                  select2Color("white", "black")
                   globalNetwork.setOptions({nodes: {font: { color: "black" }}});
                   if ($("#buffer-network").css("display") === "block") {
                       bufferNetwork.setOptions({nodes: {font: { color: "black" }}});
                   }
               }
           })
-
-          $(".dropdownfiles, .dropdownnodes, .dropdownfilters").on("select2:open", function () {
-              if (darkmode) {select2Color("#1d1e20", "#c7cec6");
-              } else {select2Color("white", "black");}
-          });
 
           // Visjs network options
           var options = {
@@ -538,20 +530,13 @@
                       width: 'resolve'
                   })
                   .on('select2:select', function (e) {
-                      if (darkmode) {select2Color("#1d1e20", "#c7cec6");
-                      } else {select2Color("white", "black");}
                       filters.add(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
                       view.refresh()
                   })
                   .on('select2:unselect', function (e) {
-                      if (darkmode) {select2Color("#1d1e20", "#c7cec6");
-                      } else {select2Color("white", "black");}
                       filters.delete(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
                       view.refresh()
                   });
-
-              if (darkmode) {select2Color("#1d1e20", "#c7cec6");
-              } else {select2Color("white", "black");}
 
               $("#filenode").on("load", function () {
                   var string = document.getElementById("filenode").contentWindow.location.href;
@@ -628,8 +613,6 @@
               if (currentNode) {
                   drawBufferNetwork();
               }
-              if (darkmode) {select2Color("#1d1e20", "#c7cec6");
-              } else {select2Color("white", "black");}
           });
           $("#fileview").click(function() {
               $("#global-network").css("display", "none");
@@ -640,8 +623,6 @@
               $("#dropdownfiles").css("display", "block");
               $("#dropdownfilters").css("display", "none");
               $("#fileframe").css("display", "block");
-              if (darkmode) {select2Color("#1d1e20", "#c7cec6");
-              } else {select2Color("white", "black");}
           });
           $("#toggle-preview").click(function() {
               if (preview) {
