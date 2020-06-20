@@ -2,8 +2,8 @@
 
 ;; Author: Göktuğ Karakaşlı <karakasligk@gmail.com>
 ;; URL: https://github.com/goktug97/org-roam-server
-;; Version: 1.0.2
-;; Package-Requires: ((org-roam "1.1.1") (org "9.3") (emacs "26.1") (simple-httpd "1.5.1") (s "1.12.0"))
+;; Version: 1.0.3
+;; Package-Requires: ((org-roam "1.1.2") (org "9.3") (emacs "26.1") (simple-httpd "1.5.1") (s "1.12.0"))
 
 ;; MIT License
 
@@ -79,20 +79,25 @@ http://127.0.0.1:`org-roam-server-port`."
   :group 'org-roam-server
   :type 'integer)
 
-(defcustom org-roam-server-label-wrap-length 20
+(defcustom org-roam-server-network-label-wrap-length 20
   "Maximum character length of labels in the network for each line."
   :group 'org-roam-server
   :type 'integer)
 
-(defcustom org-roam-server-label-truncate t
+(defcustom org-roam-server-network-label-truncate t
   "Truncate label if it exceeds `org-roam-server-label-truncate-length`."
   :group 'org-roam-server
   :type 'boolean)
 
-(defcustom org-roam-server-label-truncate-length 60
+(defcustom org-roam-server-network-label-truncate-length 60
   "Maximum character length of labels in the network."
   :group 'org-roam-server
   :type 'integer)
+
+(defcustom org-roam-server-network-arrows nil
+  "Enable arrows in the network."
+  :group 'org-roam-server
+  :type 'boolean)
 
 (defcustom org-roam-server-authenticate nil
   "Enable authentication."
@@ -115,13 +120,20 @@ http://127.0.0.1:`org-roam-server-port`."
   :group 'org-roam-server
   :type 'string)
 
+(define-obsolete-variable-alias 'org-roam-server-label-wrap-length
+  'org-roam-server-network-label-wrap-length "org-roam-server 1.0.3")
+(define-obsolete-variable-alias 'org-roam-server-label-truncate
+  'org-roam-server-network-label-truncate "org-roam-server 1.0.3")
+(define-obsolete-variable-alias 'org-roam-server-label-truncate-length
+  'org-roam-server-network-label-truncate-length "org-roam-server 1.0.3")
+
 (defun org-roam-server-random-token (length)
   "Create a random token with length of `LENGTH`."
   (with-temp-buffer
     (dotimes (_ length)
-     (insert
-      (let ((x (random 36)))
-        (if (< x 10) (+ x ?0) (+ x (- ?a 10))))))
+      (insert
+       (let ((x (random 36)))
+         (if (< x 10) (+ x ?0) (+ x (- ?a 10))))))
     (buffer-string)))
 
 (defun org-roam-server-html-servlet (file)
@@ -158,7 +170,7 @@ http://127.0.0.1:`org-roam-server-port`."
 This is added as a hook to `org-capture-after-finalize-hook'."
   (when (and (not org-note-abort))
     (if-let ((file (org-roam-capture--get :file-path)))
-      (eval (org-roam-server-html-servlet file)))))
+        (eval (org-roam-server-html-servlet file)))))
 
 (defun org-roam-server-visjs-json (node-query)
   "Convert `org-roam` NODE-QUERY db query to the visjs json format."
@@ -189,10 +201,11 @@ This is added as a hook to `org-capture-after-finalize-hook'."
                       (cons 'title title)
                       (cons 'tags tags)
                       (cons 'label (s-word-wrap
-                                    org-roam-server-label-wrap-length
-                                    (if org-roam-server-label-truncate
+                                    org-roam-server-network-label-wrap-length
+                                    (if org-roam-server-network-label-truncate
                                         (s-truncate
-                                         org-roam-server-label-truncate-length title)
+                                         org-roam-server-network-label-truncate-length
+                                         title)
                                       title)))
                       (cons 'url (concat "org-protocol://roam-file?file="
                                          (url-hexify-string file)))
@@ -201,18 +214,18 @@ This is added as a hook to `org-capture-after-finalize-hook'."
       (dolist (edge edges)
         (let* ((title-source (org-roam--path-to-slug (elt edge 0)))
                (title-target (org-roam--path-to-slug (elt edge 1))))
-          (push (list (cons 'from title-source)
-                      (cons 'to title-target)
-                      ;(cons 'arrows "to")
-                      )
+          (push (remove nil (list (cons 'from title-source)
+                                  (cons 'to title-target)
+                                  (when org-roam-server-network-arrows
+                                    (cons 'arrows "to"))))
                 (cdr (elt graph 1)))))
       (dolist (edge edges-cites)
         (let* ((title-source (org-roam--path-to-slug (elt edge 0)))
                (title-target (org-roam--path-to-slug (elt edge 1))))
-          (push (list (cons 'from title-source)
-                      (cons 'to title-target)
-                      ;(cons 'arrows "to")
-                      )
+          (push (remove nil (list (cons 'from title-source)
+                                  (cons 'to title-target)
+                                  (when org-roam-server-network-arrows
+                                    (cons 'arrows "to"))))
                 (cdr (elt graph 1)))))
       (json-encode graph))))
 
