@@ -68,36 +68,53 @@
       #dropdownfiles {
           display: none;
           position: absolute;
+          width: 25%;
           z-index: 5;
       }
 
-      #dropdownnodes {
-          display: none;
-          position: absolute;
-          z-index: 5;
+      #controls {
+          position: fixed;
           bottom: 0;
           left: 0;
+          right: 0;
+          max-height: 40px;
+          display: flex;
+          z-index: 5;
       }
 
-      #dropdownfilters {
+      #dropdownnodes, #dropdownfilters {
           display: none;
-          position: absolute;
-          z-index: 5;
-          bottom: 0;
-          left: 0;
+          align-self: flex-start;
+          width: 25%;
+      }
+
+      #formdistance {
+          display: none;
+          align-self: flex-start;
+          margin-left: 10px;
+      }
+
+      #formdistance label {
+          margin-bottom: 0;
+      }
+
+      #inputdistance {
+          width: 50px;
+      }
+
+      .darkmode #inputdistance {
+          color: #c7cec6;
+          background-color: #1d1e20;
+      }
+
+      #reload-button {
+          margin-left: auto;
       }
 
       #toggle-preview {
           position: relative;
           float: left;
           width: %50
-      }
-
-      #reload-button {
-          position: absolute;
-          right:    0;
-          bottom:   0;
-          z-index: 5;
       }
 
       #debug-button {
@@ -127,12 +144,24 @@
           transition: background-color 500ms ease-out;
       }
 
+      .darkmode .select2-container--default .select2-selection--single,
+      .darkmode .select2-container--default .select2-selection--multiple,
+      .darkmode .select2-search--dropdown,
+      .darkmode .select2-results,
+      .darkmode .select2-container--default .select2-selection--multiple .select2-selection__choice {
+          background-color: #1d1e20;
+       }
+
+       .darkmode .select2-search__field {
+           background-color: #1d1e20;
+           color: #c7cec6 ;
+       }
     </style>
   </head>
 
   <body>
     <div id="dropdownfiles">
-      <select class="dropdownfiles" name="files" style="width: 300px">
+      <select class="dropdownfiles" name="files" style="width: 100%;">
         <option></option>
       </select>
     </div>
@@ -172,21 +201,26 @@
     <button class="btn btn-sm btn-primary btn-simple" id="toggle-preview">
       Enable Preview
     </button>
-    <div id="dropdownnodes">
-      <select class="dropdownnodes" name="nodes" style="width: 300px">
-        <option></option>
-      </select>
-    </div>
 
-    <div id="dropdownfilters">
-      <select class="dropdownfilters" name="tags" style="width: 300px" multiple="multiple">
-        <option></option>
-      </select>
+    <div id="controls">
+      <div id="dropdownfilters">
+        <select class="dropdownfilters" name="tags" multiple="multiple" style="width: 100%;">
+          <option></option>
+        </select>
+      </div>
+      <div id="dropdownnodes">
+        <select class="dropdownnodes" name="nodes" style="width: 100%;">
+          <option></option>
+        </select>
+      </div>
+      <div id="formdistance">
+        <label for="distance">Distance: </label>
+        <input id="inputdistance" name="distance" type="number" value="1" min="0" pattern="\d+" />
+      </div>
+      <button class="btn btn-primary btn-danger btn-sm" id="reload-button">
+        Reload
+      </button>
     </div>
-
-    <button class="btn btn-primary btn-danger btn-sm" id="reload-button">
-      Reload
-    </button>
 
     <button class="btn btn-primary btn-danger btn-sm" id="debug-button">
       Debug
@@ -251,9 +285,6 @@
               $("#backlinks").width(($(window).width() - 50) * 0.3);
               $("#filenode").height($(window).height() - $("#view-menu").height() - 50);
               $("#backlinks").height($(window).height() - $("#view-menu").height() - 50);
-              $("#dropdownfiles").width($(window).width() * 0.25);
-              $("#dropdownnodes").width($(window).width() * 0.25);
-              $("#dropdownfilters").width($(window).width() * 0.25);
           };
           onWindowResize();
           window.onresize = onWindowResize;
@@ -261,6 +292,7 @@
           $("#toggle-preview").css("display", "block");
           $("#dropdownfiles").css("display", "none");
           $("#dropdownnodes").css("display", "none");
+          $("#formdistance").css("display", "none");
           $("#dropdownfilters").css("display", "block");
           $("#fileframe").css("display", "none");
           $("#global-network").css("display", "block");
@@ -269,19 +301,6 @@
           $("#preview-frame").hover(
               function () {previewFrame.style.display = "block";},
               function () {previewFrame.style.display = "none";});
-
-          function select2Color(backgroundColor, color) {
-              $(".select2-container--default .select2-selection--single")
-                  .css("background-color", backgroundColor);
-              $(".select2-container--default .select2-selection--multiple")
-                  .css("background-color", backgroundColor);
-              $(".select2-search--dropdown").css("background-color", backgroundColor);
-              $(".select2-search__field")
-                  .css({"background-color": backgroundColor, "color": color});
-              $(".select2-results").css("background-color", backgroundColor);
-              $(".select2-container--default .select2-selection--multiple .select2-selection__choice")
-                  .css("background-color", backgroundColor);
-          }
 
           var darkmode;
           if (localStorage.darkmode === "true") {
@@ -292,36 +311,31 @@
 
           $('#colormode-checkbox').change(function() {
               if(this.checked) {
+                  $(document.body).addClass("darkmode");
                   document.body.style.backgroundColor = "#1d1e20";
                   document.body.style.color = "#c7cec6";
                   darkmode = true;
                   localStorage.darkmode = true;
                   iframeSetColor("filenode", "#1d1e20", "#c7cec6");
                   iframeSetColor("backlinks", "#1d1e20", "#c7cec6");
-                  select2Color("#1d1e20", "#c7cec6")
                   globalNetwork.setOptions({nodes: {font: { color: "#c7cec6" }}});
                   if ($("#buffer-network").css("display") === "block") {
                       bufferNetwork.setOptions({nodes: {font: { color: "#c7cec6" }}});
                   }
               } else {
+                  $(document.body).removeClass("darkmode");
                   document.body.style.backgroundColor = "white";
                   document.body.style.color = "black";
                   darkmode = false;
                   localStorage.darkmode = false;
                   iframeSetColor("filenode", "white", "black");
                   iframeSetColor("backlinks", "white", "black");
-                  select2Color("white", "black")
                   globalNetwork.setOptions({nodes: {font: { color: "black" }}});
                   if ($("#buffer-network").css("display") === "block") {
                       bufferNetwork.setOptions({nodes: {font: { color: "black" }}});
                   }
               }
           })
-
-          $(".dropdownfiles, .dropdownnodes, .dropdownfilters").on("select2:open", function () {
-              if (darkmode) {select2Color("#1d1e20", "#c7cec6");
-              } else {select2Color("white", "black");}
-          });
 
           // Visjs network options
           var options = {
@@ -477,19 +491,20 @@
               $(".dropdownnodes")
                   .select2({
                       data: select2Data,
-                      placeholder: 'Node'
+                      placeholder: 'Node',
+                      width: 'resolve'
                   })
                   .on('select2:select', function (e) {
                       currentNode = e.params.data.id;
                       drawBufferNetwork();
-                  })
-                  .width($(window).width() * 0.25);
+                  });
 
               // File search dropdown (File Viewer)
               $(".dropdownfiles")
                   .select2({
                       data: select2Data,
-                      placeholder: 'File'
+                      placeholder: 'File',
+                      width: 'resolve'
                   })
                   .on('select2:select', function (e) {
                       if (darkmode) {
@@ -498,8 +513,7 @@
                           $("#fileframe").css("display", "none");
                       }
                       $("#filenode").attr("src", e.params.data.id.concat(`.html?token=${token}`));
-                  })
-                  .width($(window).width() * 0.25);
+                  });
 
               var select2Filters = [{id: "tags", text: "Tags", children: []}];
               tags.forEach(function (tag) {
@@ -512,24 +526,17 @@
               $(".dropdownfilters")
                   .select2({
                       data: select2Filters,
-                      placeholder: "Filter"
+                      placeholder: "Filter",
+                      width: 'resolve'
                   })
                   .on('select2:select', function (e) {
-                      if (darkmode) {select2Color("#1d1e20", "#c7cec6");
-                      } else {select2Color("white", "black");}
                       filters.add(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
                       view.refresh()
                   })
                   .on('select2:unselect', function (e) {
-                      if (darkmode) {select2Color("#1d1e20", "#c7cec6");
-                      } else {select2Color("white", "black");}
                       filters.delete(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
                       view.refresh()
-                  })
-                  .width($(window).width() * 0.25);
-
-              if (darkmode) {select2Color("#1d1e20", "#c7cec6");
-              } else {select2Color("white", "black");}
+                  });
 
               $("#filenode").on("load", function () {
                   var string = document.getElementById("filenode").contentWindow.location.href;
@@ -590,6 +597,7 @@
               $("#dropdownfilters").css("display", "block");
               $("#fileframe").css("display", "none");
               $("#dropdownnodes").css("display", "none");
+              $("#formdistance").css("display", "none");
               $("#global-network").css("display", "block");
               $("#buffer-network").css("display", "none");
           });
@@ -598,25 +606,23 @@
               $("#dropdownfiles").css("display", "none");
               $("#dropdownfilters").css("display", "none");
               $("#dropdownnodes").css("display", "block");
+              $("#formdistance").css("display", "block");
               $("#fileframe").css("display", "none");
               $("#global-network").css("display", "none");
               $("#buffer-network").css("display", "block");
               if (currentNode) {
                   drawBufferNetwork();
               }
-              if (darkmode) {select2Color("#1d1e20", "#c7cec6");
-              } else {select2Color("white", "black");}
           });
           $("#fileview").click(function() {
               $("#global-network").css("display", "none");
               $("#buffer-network").css("display", "none");
               $("#toggle-preview").css("display", "none");
               $("#dropdownnodes").css("display", "none");
+              $("#formdistance").css("display", "none");
               $("#dropdownfiles").css("display", "block");
               $("#dropdownfilters").css("display", "none");
               $("#fileframe").css("display", "block");
-              if (darkmode) {select2Color("#1d1e20", "#c7cec6");
-              } else {select2Color("white", "black");}
           });
           $("#toggle-preview").click(function() {
               if (preview) {
@@ -627,6 +633,7 @@
                   $("#toggle-preview").text("Disable Preview");
               }
           });
+          $("#inputdistance").on("input", drawBufferNetwork);
 
           function updateNodesAndEdges () {
               var tempDataset = new vis.DataSet(roamData.nodes);
@@ -766,15 +773,36 @@
               previewFrame.style.display = "none";
           }
 
+          function collectConnectedNodes(allNodes, baseNode, distance, alreadyConnected) {
+              if (distance < 1) {
+                  return new Set([baseNode]); // base case for recursion
+              }
+
+              var connectedNodes = new Set([baseNode]);
+              var neighbours = tempNetwork.getConnectedNodes(baseNode);
+
+              for (var i = 0; i < neighbours.length; i++) {
+                  // Skip this node if we've already seen it. Helps with performance. I think this is
+                  // safe: If we've already seen a node, the distance when we saw it originally must
+                  // have been at least as high as it is now, so we would have done at least as much
+                  // traversal as we're skipping.
+                  if (alreadyConnected && alreadyConnected.has(neighbours[i])) continue;
+                  var neighbourConnectedNodes = collectConnectedNodes(allNodes, neighbours[i], distance - 1, connectedNodes);
+                  for (var node of neighbourConnectedNodes) {
+                      connectedNodes.add(node);
+                  }
+              }
+
+              return connectedNodes;
+          }
+
           function drawBufferNetwork() {
               var nodeDataset = new vis.DataSet(roamData.nodes);
               var nodes = nodeDataset.get({returnType:"Object"});
-              var connectedNodes = tempNetwork.getConnectedNodes(currentNode);
-              var bufferNodes = [nodes[currentNode]];
+              var connectedNodes = Array.from(collectConnectedNodes(nodes, currentNode, parseInt(document.getElementById('inputdistance').value)));
+              var bufferNodes = [];
               for (var i = 0; i < connectedNodes.length; i++) {
-                  if (connectedNodes[i] !== currentNode) {
-                      bufferNodes.push(nodes[connectedNodes[i]]);
-                  }
+                  bufferNodes.push(nodes[connectedNodes[i]]);
               }
               var bufferContainer = document.getElementById("buffer-network");
               bufferNetwork = new vis.Network(
