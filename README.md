@@ -40,7 +40,7 @@ The graph utilizes org-roam protocol which means if you click on one
 of the nodes, it will open the corresponding file in Emacs. For this
 feature to work, org-roam protocol should be configured in the system.
 
-[Configuring Org-Roam Protocol](https://org-roam.github.io/org-roam/manual/Installation-_00281_0029.html)
+[Configuring Org-Roam Protocol](https://www.orgroam.com/manual/Installation-_00281_0029.html#Installation-_00281_0029)
 
 Also make sure the emacs server is started; `M-x server-start RET`
 
