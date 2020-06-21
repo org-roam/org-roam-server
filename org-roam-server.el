@@ -101,7 +101,8 @@ http://127.0.0.1:`org-roam-server-port`."
 
 (defcustom org-roam-server-network-vis-options nil
   "Options to be passed directly to vis.Network, in JSON format.
-e.g. { \"physics\": { \"enabled\": false } }"
+e.g. (json-encode (list (cons 'physics (list (cons 'enabled json-false)))))
+or { \"physics\": { \"enabled\": false } }"
   :group 'org-roam-server
   :type 'string)
 
