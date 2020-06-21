@@ -382,7 +382,7 @@ DESCRIPTION is the shown attribute to the user if the image is not rendered."
   (if org-roam-server-authenticate
       (if (not (string= org-roam-server-token token))
           (httpd-error httpd-current-proc 403)))
-  (insert (format "data: %s\n\n" (or org-roam-server-network-vis-options "{}"))))
+  (insert (or org-roam-server-network-vis-options "{}")))
 
 (defun org-roam-server-insert-title (title)
   "Insert the TITLE as `org-document-title`."
