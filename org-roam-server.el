@@ -3,7 +3,7 @@
 ;; Author: Göktuğ Karakaşlı <karakasligk@gmail.com>
 ;; URL: https://github.com/goktug97/org-roam-server
 ;; Version: 1.0.3
-;; Package-Requires: ((org-roam "1.1.2") (org "9.3") (emacs "26.1") (simple-httpd "1.5.1") (s "1.12.0"))
+;; Package-Requires: ((org-roam "1.2.0") (org "9.3") (emacs "26.1") (simple-httpd "1.5.1") (s "1.12.0"))
 
 ;; MIT License
 
