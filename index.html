@@ -244,10 +244,24 @@
           return v;
       }
 
+      /* Get custom configuration for vis.Network */
+      function getCustomNetworkOptions() {
+          return $.get(`/network-vis-options?token=${token}`);
+      }
+
       var urlParams = new URLSearchParams(window.location.search);
       var token = urlParams.get('token');
 
-      $(window).on("load", function () {
+     $(window).on("load", function () {
+         getCustomNetworkOptions()
+             .done(init)
+             .fail(function (request, status, error) {
+                 console.error(`Error loading user network config: ${error.message}`);
+                 init();
+             });
+     });
+
+     function init(customNetworkOptions) {
           var previewFrame = document.getElementById("preview-frame"); // div
           var hoverNode = document.getElementById("hovernode"); // iframe
           var globalNetwork;
@@ -330,11 +344,11 @@
           })
 
           // Visjs network options
-          var options = {
-              nodes: {shape: "dot",},
-              interaction:{hover:true},
-              layout:{improvedLayout: true}
-          };
+          var options = $.extend(true, {
+              nodes: {shape: "dot"},
+              interaction: {hover: true},
+              layout: {improvedLayout: true}
+          }, customNetworkOptions);
 
           var tags;
 
@@ -812,7 +826,7 @@
                   bufferNetwork.setOptions({nodes: {font: { color: "black" }}});
               }
           }
-      });
+      }
     </script>
   </body>
 </html>

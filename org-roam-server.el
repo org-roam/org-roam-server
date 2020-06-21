@@ -99,6 +99,12 @@ http://127.0.0.1:`org-roam-server-port`."
   :group 'org-roam-server
   :type 'boolean)
 
+(defcustom org-roam-server-network-vis-options nil
+  "Options to be passed directly to vis.Network, in JSON format.
+e.g. { \"physics\": { \"enabled\": false } }"
+  :group 'org-roam-server
+  :type 'string)
+
 (defcustom org-roam-server-authenticate nil
   "Enable authentication."
   :group 'org-roam-server
@@ -370,6 +376,12 @@ DESCRIPTION is the shown attribute to the user if the image is not rendered."
     (when (or force (not (string= data org-roam-server-data)))
       (setq org-roam-server-data data)
       (insert (format "data: %s\n\n" org-roam-server-data)))))
+
+(defservlet* network-vis-options application/json (token)
+  (if org-roam-server-authenticate
+      (if (not (string= org-roam-server-token token))
+          (httpd-error httpd-current-proc 403)))
+  (insert (format "data: %s\n\n" (or org-roam-server-network-vis-options "{}"))))
 
 (defun org-roam-server-insert-title (title)
   "Insert the TITLE as `org-document-title`."
