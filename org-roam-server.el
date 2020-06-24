@@ -118,6 +118,15 @@ or { \"physics\": { \"enabled\": false } }"
   :group 'org-roam-server
   :type 'boolean)
 
+(defcustom org-roam-server-network-poll t
+  "Poll the network changes if it is set to `t`.
+If you have a large network and experience lag
+in your system, you may want to set this to `nil`.
+If set to `nil` the changes can be reloaded using
+the reload button."
+  :group 'org-roam-server
+  :type 'boolean)
+
 (defcustom org-roam-server-export-style
   (format "<style>%s</style>"
           (with-temp-buffer
@@ -370,13 +379,14 @@ DESCRIPTION is the shown attribute to the user if the image is not rendered."
   (if org-roam-server-authenticate
       (if (not (string= org-roam-server-token token))
           (httpd-error httpd-current-proc 403)))
-  (let* ((node-query `[:select [titles:file titles tags] :from titles
-                               :left :outer :join tags :on (= titles:file tags:file)
-                               ,@(org-roam-graph--expand-matcher 'titles:file t)])
-         (data (org-roam-server-visjs-json node-query)))
-    (when (or force (not (string= data org-roam-server-data)))
-      (setq org-roam-server-data data)
-      (insert (format "data: %s\n\n" org-roam-server-data)))))
+  (when (or force org-roam-server-network-poll)
+    (let* ((node-query `[:select [titles:file titles tags] :from titles
+                                 :left :outer :join tags :on (= titles:file tags:file)
+                                 ,@(org-roam-graph--expand-matcher 'titles:file t)])
+           (data (org-roam-server-visjs-json node-query)))
+      (when (or force (not (string= data org-roam-server-data)))
+        (setq org-roam-server-data data)
+        (insert (format "data: %s\n\n" org-roam-server-data))))))
 
 (defservlet* network-vis-options application/json (token)
   (if org-roam-server-authenticate
