@@ -118,10 +118,12 @@ or { \"physics\": { \"enabled\": false } }"
   :group 'org-roam-server
   :type 'boolean)
 
-(defcustom org-roam-server-network-autoreload t
-  "Autoreload the network if it is set to t.
-If you have large network and experience lag
-in your system you may want to set this to nil."
+(defcustom org-roam-server-network-poll t
+  "Poll the network changes if it is set to `t`.
+If you have a large network and experience lag
+in your system, you may want to set this to `nil`.
+If set to `nil` the changes can be reloaded using
+the reload button."
   :group 'org-roam-server
   :type 'boolean)
 
@@ -377,7 +379,7 @@ DESCRIPTION is the shown attribute to the user if the image is not rendered."
   (if org-roam-server-authenticate
       (if (not (string= org-roam-server-token token))
           (httpd-error httpd-current-proc 403)))
-  (when (or force org-roam-server-network-autoreload)
+  (when (or force org-roam-server-network-poll)
     (let* ((node-query `[:select [titles:file titles tags] :from titles
                                  :left :outer :join tags :on (= titles:file tags:file)
                                  ,@(org-roam-graph--expand-matcher 'titles:file t)])
