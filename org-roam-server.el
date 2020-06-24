@@ -95,9 +95,11 @@ http://127.0.0.1:`org-roam-server-port`."
   :type 'integer)
 
 (defcustom org-roam-server-network-arrows nil
-  "Enable arrows in the network."
+  "If the type is given, enable arrows in the network.
+Available types are to, middle, and from.
+Types can be concatanated using commas."
   :group 'org-roam-server
-  :type 'boolean)
+  :type 'string)
 
 (defcustom org-roam-server-network-vis-options nil
   "Options to be passed directly to vis.Network, in JSON format.
@@ -223,16 +225,14 @@ This is added as a hook to `org-capture-after-finalize-hook'."
                (title-target (org-roam--path-to-slug (elt edge 1))))
           (push (remove nil (list (cons 'from title-source)
                                   (cons 'to title-target)
-                                  (when org-roam-server-network-arrows
-                                    (cons 'arrows "to"))))
+                                  (cons 'arrows org-roam-server-network-arrows)))
                 (cdr (elt graph 1)))))
       (dolist (edge edges-cites)
         (let* ((title-source (org-roam--path-to-slug (elt edge 0)))
                (title-target (org-roam--path-to-slug (elt edge 1))))
           (push (remove nil (list (cons 'from title-source)
                                   (cons 'to title-target)
-                                  (when org-roam-server-network-arrows
-                                    (cons 'arrows "to"))))
+                                  (cons 'arrows org-roam-server-network-arrows)))
                 (cdr (elt graph 1)))))
       (json-encode graph))))
 
