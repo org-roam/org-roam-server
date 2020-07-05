@@ -108,6 +108,11 @@ or { \"physics\": { \"enabled\": false } }"
   :group 'org-roam-server
   :type 'string)
 
+(defcustom org-roam-server-style nil
+  "The CSS that can be used to customize the application."
+  :group 'org-roam-server
+  :type 'string)
+
 (defcustom org-roam-server-authenticate nil
   "Enable authentication."
   :group 'org-roam-server
@@ -393,6 +398,12 @@ DESCRIPTION is the shown attribute to the user if the image is not rendered."
       (if (not (string= org-roam-server-token token))
           (httpd-error httpd-current-proc 403)))
   (insert (or org-roam-server-network-vis-options "{}")))
+
+(defservlet* server-css text/css (token)
+  (if org-roam-server-authenticate
+      (if (not (string= org-roam-server-token token))
+          (httpd-error httpd-current-proc 403)))
+  (insert org-roam-server-style))
 
 (defun org-roam-server-insert-title (title)
   "Insert the TITLE as `org-document-title`."

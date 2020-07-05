@@ -142,12 +142,12 @@
       .darkmode .select2-results,
       .darkmode .select2-container--default .select2-selection--multiple .select2-selection__choice {
           background-color: #1d1e20;
-       }
+      }
 
-       .darkmode .select2-search__field {
-           background-color: #1d1e20;
-           color: #c7cec6 ;
-       }
+      .darkmode .select2-search__field {
+          background-color: #1d1e20;
+          color: #c7cec6 ;
+      }
     </style>
   </head>
 
@@ -244,24 +244,33 @@
           return v;
       }
 
-      /* Get custom configuration for vis.Network */
-      function getCustomNetworkOptions() {
-          return $.get(`/network-vis-options?token=${token}`);
-      }
-
       var urlParams = new URLSearchParams(window.location.search);
       var token = urlParams.get('token');
 
-     $(window).on("load", function () {
-         getCustomNetworkOptions()
-             .done(init)
-             .fail(function (request, status, error) {
-                 console.error(`Error loading user network config: ${error.message}`);
-                 init();
-             });
-     });
+      $(window).on("load", function () {
+          var customNetworkOptions = {}
+          $.ajax({
+              async: false,
+              type: 'GET',
+              url: `/network-vis-options?token=${token}`,
+              success: function(data) {
+                  customNetworkOptions = data;
+              }
+          });
 
-     function init(customNetworkOptions) {
+          $.ajax({
+              async: false,
+              type: 'GET',
+              url: `/server-css?token=${token}`,
+              success: function(data) {
+                  var style = document.createElement('style');
+                  style.type = 'text/css';
+                  style.innerHTML = data;
+                  document.getElementsByTagName('head')[0].appendChild(style);
+                  console.log(style);
+              }
+          });
+
           var previewFrame = document.getElementById("preview-frame"); // div
           var hoverNode = document.getElementById("hovernode"); // iframe
           var globalNetwork;
@@ -765,8 +774,11 @@
                           previewFrame.style.OTransform = transformString;
                           previewFrame.style.transform = transformString;
 
-                          if (darkmode) {iframeSetColor("hovernode", "#1d1e20", "#c7cec6");
-                          } else {iframeSetColor("hovernode", "white", "black");}
+                          if (darkmode) {
+                              iframeSetColor("hovernode", "#1d1e20", "#c7cec6");
+                          } else {
+                              iframeSetColor("hovernode", "white", "black");
+                          }
 
                           previewFrame.style.display = "block";
                       }
@@ -826,7 +838,7 @@
                   bufferNetwork.setOptions({nodes: {font: { color: "black" }}});
               }
           }
-      }
+      });
     </script>
   </body>
 </html>
