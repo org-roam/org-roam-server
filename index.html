@@ -102,8 +102,11 @@
           background-color: #1d1e20;
       }
 
-      #reload-button {
+       #reload-button {
           margin-left: auto;
+      }
+     #toggle-list-type-button {
+          margin-right: auto;
       }
 
       #toggle-preview {
@@ -134,6 +137,9 @@
           -moz-transition: background-color 500ms ease-out;
           -o-transition: background-color 500ms ease-out;
           transition: background-color 500ms ease-out;
+      }
+      .select2-container--default .select2-selection--multiple .select2-selection__choice {
+          color: #FFF;
       }
 
       .darkmode .select2-container--default .select2-selection--single,
@@ -209,6 +215,9 @@
         <label for="distance">Distance: </label>
         <input id="inputdistance" name="distance" type="number" value="1" min="0" pattern="\d+" />
       </div>
+      <button class="btn btn-primary btn-danger btn-sm" id="toggle-list-type-button">
+        black list
+      </button>
       <button class="btn btn-primary btn-danger btn-sm" id="reload-button">
         Reload
       </button>
@@ -365,13 +374,28 @@
           var nodeDataset = new vis.DataSet();
           var edgeDataset = new vis.DataSet();
 
-          var filters = new Set();
+          var white_list_filters = new Set();
+          var black_list_filters = new Set();
           var view = new vis.DataView(nodeDataset, {
-              filter: function (item) {
-                  if (filters.size > 0) {
+        	filter: function (item) {
+                 //black list has precidence
+                  if (black_list_filters.size > 0) {
                       if (item.tags) {
                           tags = new Set(item.tags);
-                          for (let filter of filters.values()) {
+                          for (let filter of black_list_filters.values()) {
+                              var parsed_filter = JSON.parse(filter);
+                              if (parsed_filter.parent === "tags"){
+                                  if (tags.has(parsed_filter.id)) {
+                                      return false;
+                                  }
+                              }
+                          }
+        	      }
+                  }
+                 if (white_list_filters.size > 0) {
+                      if (item.tags) {
+                          tags = new Set(item.tags);
+                          for (let filter of white_list_filters.values()) {
                               var parsed_filter = JSON.parse(filter);
                               if (parsed_filter.parent === "tags"){
                                   if (!tags.has(parsed_filter.id)) {
@@ -383,7 +407,9 @@
                           return false;
                       }
                   }
+
                   return true;
+
               }
           });
 
@@ -407,7 +433,7 @@
 
           function onStabilized () {
               // Update positions storage
-              if (filters.size == 0) { // Save only if it is full network
+              if (black_list_filters.size + white_list_filters.size == 0) { // Save only if it is full network
                   localStorage.positions = JSON.stringify(globalNetwork.getPositions());
               }
           }
@@ -455,6 +481,22 @@
               });
           }
           reload();
+
+	$("#toggle-list-type-button").click(function() {
+		let list_type_state = document.getElementById('toggle-list-type-button').innerText;
+	        let color = "green";
+	        if (list_type_state == "white list"){
+	        	list_type_state = "black list";
+		        color = "red";
+	        } else {
+	        	if (list_type_state == "black list"){
+	        		list_type_state = "white list";
+	        		color = "green";
+	               }
+		}
+	        document.getElementById('toggle-list-type-button').style.background = color;
+		      document.getElementById('toggle-list-type-button').innerText = list_type_state;
+          });
 
           $("#reload-button").click(function() {
               roamSource.close()
@@ -537,18 +579,38 @@
               });
 
               $(".dropdownfilters").html(""); // To prevent duplicate tags
+              var colors = new Array();
               $(".dropdownfilters")
                   .select2({
                       data: select2Filters,
                       placeholder: "Filter",
-                      width: 'resolve'
+                      width: 'resolve',
+                      templateSelection: function (data, container) {
+                         let color = $('#toggle-list-type-button').css("backgroundColor");
+                         if(! colors[data.id]) { 
+                         $(container).css("background-color", color);
+                         colors[data.id] = color;
+                         } else {
+                         $(container).css("background-color", colors[data.id]);
+                         }
+                         return data.text;
+                      }
                   })
                   .on('select2:select', function (e) {
-                      filters.add(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
+let list_type_state = document.getElementById('toggle-list-type-button').innerText;
+                      if (list_type_state == "white list") {
+                                   white_list_filters.add(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
+                                   }
+                      if (list_type_state == "black list") {
+                                   black_list_filters.add(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
+                                   }
                       view.refresh()
                   })
                   .on('select2:unselect', function (e) {
-                      filters.delete(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
+                      //delete from both. doesn't matter because tag shouldn't be there any ways.
+                      white_list_filters.delete(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
+                      black_list_filters.delete(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
+                      colors[e.params.data.id] = null;
                       view.refresh()
                   });
 
