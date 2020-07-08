@@ -679,6 +679,7 @@
               $("#formdistance").css("display", "none");
               $("#global-network").css("display", "block");
               $("#buffer-network").css("display", "none");
+              $("#toggle-list-type-button").css("display", "block");
           });
           $("#bufferview").click(function() {
               $("#toggle-preview").css("display", "block");
@@ -689,6 +690,7 @@
               $("#fileframe").css("display", "none");
               $("#global-network").css("display", "none");
               $("#buffer-network").css("display", "block");
+              $("#toggle-list-type-button").css("display", "none");
               if (currentNode) {
                   drawBufferNetwork();
               }
@@ -702,6 +704,7 @@
               $("#dropdownfiles").css("display", "block");
               $("#dropdownfilters").css("display", "none");
               $("#fileframe").css("display", "block");
+              $("#toggle-list-type-button").css("display", "none");
           });
           $("#toggle-preview").click(function() {
               if (preview) {
