@@ -387,8 +387,8 @@
                           for (let filter of blackListFilters.values()) {
                               var parsed_filter = JSON.parse(filter);
                               if (parsed_filter.parent === "tags"){
-                                  if (tags.has(parsed_filter.id)) {}
-                                      {return false;
+				  if (tags.has(parsed_filter.id)){
+                                      return false;
                                   }
                               }
                           }
