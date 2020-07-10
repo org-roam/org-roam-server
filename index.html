@@ -198,7 +198,7 @@
     </div>
 
     <button class="btn btn-sm btn-primary btn-simple" id="toggle-preview">
-      Enable Preview
+      Disable Preview
     </button>
 
     <div id="controls">
@@ -376,18 +376,18 @@
           var edgeDataset = new vis.DataSet();
 
           var whiteListFilters = new Set();
-          var blackListFilters = new Set();
+          var blackListFilters = new Set(["todos", "config"].map((val) => JSON.stringify({id: val, parent: "tags"})));
           var colors = new Array();
           var view = new vis.DataView(nodeDataset, {
           filter: function (item) {
                  //black list has precidence
                   if (blackListFilters.size > 0) {
                       if (item.tags) {
-                          tags = new Set(item.tags);
+                          let itemTags = new Set(item.tags);
                           for (let filter of blackListFilters.values()) {
                               var parsed_filter = JSON.parse(filter);
                               if (parsed_filter.parent === "tags"){
-				  if (tags.has(parsed_filter.id)){
+                                  if (itemTags.has(parsed_filter.id)){
                                       return false;
                                   }
                               }
@@ -396,11 +396,11 @@
                   }
                  if (whiteListFilters.size > 0) {
                       if (item.tags) {
-                          tags = new Set(item.tags);
+                          let itemTags = new Set(item.tags);
                           for (let filter of whiteListFilters.values()) {
                               var parsed_filter = JSON.parse(filter);
                               if (parsed_filter.parent === "tags"){
-                                  if (!tags.has(parsed_filter.id)) {
+                                  if (!itemTags.has(parsed_filter.id)) {
                                       return false;
                                   }
                               }
@@ -441,7 +441,7 @@
           }
 
           var currentNode;
-          var preview = false;
+          var preview = true;
 
           var currentBuffer;
           var oldCurrentBufferData = "";
@@ -577,7 +577,12 @@
               tags.forEach(function (tag) {
                   select2Filters[0].children.push({id: tag,
                                                    text: tag,
-                                                   parent: "tags"})
+                                                   parent: "tags",
+                                                   selected: (function (tag) {
+                                                   let jsoned = JSON.stringify({id: tag, parent: "tags"});
+                                                   return(whiteListFilters.has(jsoned) || blackListFilters.has(jsoned));})(tag)
+
+                                                   })
               });
 
               $(".dropdownfilters").html(""); // To prevent duplicate tags
