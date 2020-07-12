@@ -2,8 +2,8 @@
 
 ;; Author: Göktuğ Karakaşlı <karakasligk@gmail.com>
 ;; URL: https://github.com/goktug97/org-roam-server
-;; Version: 1.0.3
-;; Package-Requires: ((org-roam "1.2.0") (org "9.3") (emacs "26.1") (simple-httpd "1.5.1") (s "1.12.0"))
+;; Version: 1.0.4
+;; Package-Requires: ((org-roam "1.2.0") (org "9.3") (emacs "26.1") (dash "2.17.0") (simple-httpd "1.5.1") (s "1.12.0"))
 
 ;; MIT License
 
@@ -37,6 +37,7 @@
 (require 'url)
 
 (require 's)
+(require 'dash)
 (require 'simple-httpd)
 
 (require 'org)
@@ -199,7 +200,8 @@ This is added as a hook to `org-capture-after-finalize-hook'."
   "Convert `org-roam` NODE-QUERY db query to the visjs json format."
   (org-roam-db--ensure-built)
   (org-roam--with-temp-buffer nil
-    (let* ((nodes (org-roam-db-query node-query))
+    (let* ((-compare-fn (lambda (x y) (string= (car x) (car y))))
+           (nodes (-distinct (org-roam-db-query node-query)))
            (edges-query
             `[:with selected :as [:select [file] :from ,node-query]
                     :select :distinct [to from] :from links
@@ -217,7 +219,7 @@ This is added as a hook to `org-capture-after-finalize-hook'."
                         (cons 'edges (list)))))
       (dotimes (idx (length nodes))
         (let* ((file (xml-escape-string (car (elt nodes idx))))
-               (title (or (caadr (elt nodes idx))
+               (title (or (cadr (elt nodes idx))
                           (org-roam--path-to-slug file)))
                (tags (elt (elt nodes idx) 2)))
           (push (list (cons 'id (org-roam--path-to-slug file))
@@ -343,10 +345,11 @@ DESCRIPTION is the shown attribute to the user if the image is not rendered."
     (setq-local httpd-host org-roam-server-host)
     (setq httpd-root org-roam-server-root)
     (httpd-start)
-    (let ((node-query `[:select [file titles] :from titles
+    (let ((-compare-fn (lambda (x y) (string= (car x) (car y))))
+          (node-query `[:select [file title] :from titles
                                 ,@(org-roam-graph--expand-matcher 'file t)]))
       (org-roam--with-temp-buffer nil
-        (let ((nodes (org-roam-db-query node-query)))
+        (let ((nodes (-distinct (org-roam-db-query node-query))))
           (dotimes (idx (length nodes))
             (let ((file (xml-escape-string (car (elt nodes idx)))))
               (if (org-roam--org-roam-file-p file)
@@ -385,9 +388,9 @@ DESCRIPTION is the shown attribute to the user if the image is not rendered."
       (if (not (string= org-roam-server-token token))
           (httpd-error httpd-current-proc 403)))
   (when (or force org-roam-server-network-poll)
-    (let* ((node-query `[:select [titles:file titles tags] :from titles
+    (let* ((node-query `[:select [titles:file titles:title tags] :from titles
                                  :left :outer :join tags :on (= titles:file tags:file)
-                                 ,@(org-roam-graph--expand-matcher 'titles:file t)])
+                                 ,@(org-roam-graph--expand-matcher 'files:file t)])
            (data (org-roam-server-visjs-json node-query)))
       (when (or force (not (string= data org-roam-server-data)))
         (setq org-roam-server-data data)
