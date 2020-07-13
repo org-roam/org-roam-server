@@ -390,7 +390,7 @@ DESCRIPTION is the shown attribute to the user if the image is not rendered."
   (when (or force org-roam-server-network-poll)
     (let* ((node-query `[:select [titles:file titles:title tags] :from titles
                                  :left :outer :join tags :on (= titles:file tags:file)
-                                 ,@(org-roam-graph--expand-matcher 'files:file t)])
+                                 ,@(org-roam-graph--expand-matcher 'titles:file t)])
            (data (org-roam-server-visjs-json node-query)))
       (when (or force (not (string= data org-roam-server-data)))
         (setq org-roam-server-data data)
