@@ -106,6 +106,10 @@
           margin-left: auto;
       }
 
+      #toggle-list-type-button {
+          margin-right: auto;
+      }
+
       #toggle-preview {
           position: relative;
           float: left;
@@ -134,6 +138,9 @@
           -moz-transition: background-color 500ms ease-out;
           -o-transition: background-color 500ms ease-out;
           transition: background-color 500ms ease-out;
+      }
+      .select2-container--default .select2-selection--multiple .select2-selection__choice {
+          color: #ffffff;
       }
 
       .darkmode .select2-container--default .select2-selection--single,
@@ -191,7 +198,7 @@
     </div>
 
     <button class="btn btn-sm btn-primary btn-simple" id="toggle-preview">
-      Enable Preview
+      Disable Preview
     </button>
 
     <div id="controls">
@@ -209,6 +216,9 @@
         <label for="distance">Distance: </label>
         <input id="inputdistance" name="distance" type="number" value="1" min="0" pattern="\d+" />
       </div>
+      <button class="btn btn-primary btn-danger btn-sm" id="toggle-list-type-button">
+        black list
+      </button>
       <button class="btn btn-primary btn-danger btn-sm" id="reload-button">
         Reload
       </button>
@@ -365,16 +375,32 @@
           var nodeDataset = new vis.DataSet();
           var edgeDataset = new vis.DataSet();
 
-          var filters = new Set();
+          var whiteListFilters = new Set();
+          var blackListFilters = new Set(["todos", "config"].map((val) => JSON.stringify({id: val, parent: "tags"})));
+          var colors = new Array();
           var view = new vis.DataView(nodeDataset, {
-              filter: function (item) {
-                  if (filters.size > 0) {
+          filter: function (item) {
+                 //black list has precidence
+                  if (blackListFilters.size > 0) {
                       if (item.tags) {
-                          tags = new Set(item.tags);
-                          for (let filter of filters.values()) {
+                          let itemTags = new Set(item.tags);
+                          for (let filter of blackListFilters.values()) {
                               var parsed_filter = JSON.parse(filter);
                               if (parsed_filter.parent === "tags"){
-                                  if (!tags.has(parsed_filter.id)) {
+                                  if (itemTags.has(parsed_filter.id)){
+                                      return false;
+                                  }
+                              }
+                          }
+                      }
+                  }
+                 if (whiteListFilters.size > 0) {
+                      if (item.tags) {
+                          let itemTags = new Set(item.tags);
+                          for (let filter of whiteListFilters.values()) {
+                              var parsed_filter = JSON.parse(filter);
+                              if (parsed_filter.parent === "tags"){
+                                  if (!itemTags.has(parsed_filter.id)) {
                                       return false;
                                   }
                               }
@@ -383,7 +409,9 @@
                           return false;
                       }
                   }
+
                   return true;
+
               }
           });
 
@@ -407,13 +435,13 @@
 
           function onStabilized () {
               // Update positions storage
-              if (filters.size == 0) { // Save only if it is full network
+              if (blackListFilters.size + whiteListFilters.size == 0) { // Save only if it is full network
                   localStorage.positions = JSON.stringify(globalNetwork.getPositions());
               }
           }
 
           var currentNode;
-          var preview = false;
+          var preview = true;
 
           var currentBuffer;
           var oldCurrentBufferData = "";
@@ -453,7 +481,7 @@
                       update();
                   }
               });
-          }
+}
           reload();
 
           $("#reload-button").click(function() {
@@ -461,6 +489,22 @@
               reload();
               currentBuffer.close()
               setCurrentBufferSource();
+          });
+        
+          $("#toggle-list-type-button").click(function() {
+              let listTypeState = document.getElementById('toggle-list-type-button').innerText;
+              let color = "green";
+              if (listTypeState == "white list"){
+                   listTypeState = "black list";
+                   color = "red";
+              } else {
+                   if (listTypeState == "black list"){
+                       listTypeState = "white list";
+                       color = "green";
+                   }
+              }
+              document.getElementById('toggle-list-type-button').style.background = color;
+              document.getElementById('toggle-list-type-button').innerText = listTypeState;
           });
 
           function update () {
@@ -533,7 +577,12 @@
               tags.forEach(function (tag) {
                   select2Filters[0].children.push({id: tag,
                                                    text: tag,
-                                                   parent: "tags"})
+                                                   parent: "tags",
+                                                   selected: (function (tag) {
+                                                   let jsoned = JSON.stringify({id: tag, parent: "tags"});
+                                                   return(whiteListFilters.has(jsoned) || blackListFilters.has(jsoned));})(tag)
+
+                                                   })
               });
 
               $(".dropdownfilters").html(""); // To prevent duplicate tags
@@ -541,14 +590,35 @@
                   .select2({
                       data: select2Filters,
                       placeholder: "Filter",
-                      width: 'resolve'
+                      width: 'resolve',
+                      templateSelection: function (data, container) {
+                         let color = $('#toggle-list-type-button').css("backgroundColor");
+                         if(! colors[data.id]) { 
+                         $(container).css("background-color", color);
+                         colors[data.id] = color;
+                         } else {
+                         $(container).css("background-color", colors[data.id]);
+                         }
+                         return data.text;
+                      }
                   })
                   .on('select2:select', function (e) {
-                      filters.add(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
+                      let listTypeState = document.getElementById('toggle-list-type-button').innerText;
+                      if (listTypeState == "white list") {
+                                   whiteListFilters.add(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
+                      }
+                      if (listTypeState == "black list") {
+                                   blackListFilters.add(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
+                      }
                       view.refresh()
                   })
                   .on('select2:unselect', function (e) {
-                      filters.delete(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
+                      //delete from both. doesn't matter because tag shouldn't be there any ways.
+                      whiteListFilters.delete(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
+                      blackListFilters.delete(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
+
+                      //maintain color map
+                      colors[e.params.data.id] = null;
                       view.refresh()
                   });
 
@@ -614,6 +684,7 @@
               $("#formdistance").css("display", "none");
               $("#global-network").css("display", "block");
               $("#buffer-network").css("display", "none");
+              $("#toggle-list-type-button").css("display", "block");
           });
           $("#bufferview").click(function() {
               $("#toggle-preview").css("display", "block");
@@ -624,6 +695,7 @@
               $("#fileframe").css("display", "none");
               $("#global-network").css("display", "none");
               $("#buffer-network").css("display", "block");
+              $("#toggle-list-type-button").css("display", "none");
               if (currentNode) {
                   drawBufferNetwork();
               }
@@ -637,6 +709,7 @@
               $("#dropdownfiles").css("display", "block");
               $("#dropdownfilters").css("display", "none");
               $("#fileframe").css("display", "block");
+              $("#toggle-list-type-button").css("display", "none");
           });
           $("#toggle-preview").click(function() {
               if (preview) {
