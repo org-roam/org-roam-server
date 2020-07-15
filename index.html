@@ -139,9 +139,6 @@
           -o-transition: background-color 500ms ease-out;
           transition: background-color 500ms ease-out;
       }
-      .select2-container--default .select2-selection--multiple .select2-selection__choice {
-          color: #ffffff;
-      }
 
       .darkmode .select2-container--default .select2-selection--single,
       .darkmode .select2-container--default .select2-selection--multiple,
@@ -198,7 +195,7 @@
     </div>
 
     <button class="btn btn-sm btn-primary btn-simple" id="toggle-preview">
-      Disable Preview
+      Enable Preview
     </button>
 
     <div id="controls">
@@ -375,16 +372,16 @@
           var nodeDataset = new vis.DataSet();
           var edgeDataset = new vis.DataSet();
 
-          var whiteListFilters = new Set();
-          var blackListFilters = new Set(["todos", "config"].map((val) => JSON.stringify({id: val, parent: "tags"})));
+          var whitelistFilters = new Set();
+          var blacklistFilters = new Set();
           var colors = new Array();
           var view = new vis.DataView(nodeDataset, {
-          filter: function (item) {
-                 //black list has precidence
-                  if (blackListFilters.size > 0) {
+              filter: function (item) {
+                  //Blacklist has precidence
+                  if (blacklistFilters.size > 0) {
                       if (item.tags) {
                           let itemTags = new Set(item.tags);
-                          for (let filter of blackListFilters.values()) {
+                          for (let filter of blacklistFilters.values()) {
                               var parsed_filter = JSON.parse(filter);
                               if (parsed_filter.parent === "tags"){
                                   if (itemTags.has(parsed_filter.id)){
@@ -394,10 +391,10 @@
                           }
                       }
                   }
-                 if (whiteListFilters.size > 0) {
+                  if (whitelistFilters.size > 0) {
                       if (item.tags) {
                           let itemTags = new Set(item.tags);
-                          for (let filter of whiteListFilters.values()) {
+                          for (let filter of whitelistFilters.values()) {
                               var parsed_filter = JSON.parse(filter);
                               if (parsed_filter.parent === "tags"){
                                   if (!itemTags.has(parsed_filter.id)) {
@@ -409,9 +406,7 @@
                           return false;
                       }
                   }
-
                   return true;
-
               }
           });
 
@@ -435,13 +430,13 @@
 
           function onStabilized () {
               // Update positions storage
-              if (blackListFilters.size + whiteListFilters.size == 0) { // Save only if it is full network
+              if (blacklistFilters.size + whitelistFilters.size == 0) { // Save only if it is full network
                   localStorage.positions = JSON.stringify(globalNetwork.getPositions());
               }
           }
 
           var currentNode;
-          var preview = true;
+          var preview = false;
 
           var currentBuffer;
           var oldCurrentBufferData = "";
@@ -481,7 +476,7 @@
                       update();
                   }
               });
-}
+          }
           reload();
 
           $("#reload-button").click(function() {
@@ -490,18 +485,16 @@
               currentBuffer.close()
               setCurrentBufferSource();
           });
-        
+
           $("#toggle-list-type-button").click(function() {
               let listTypeState = document.getElementById('toggle-list-type-button').innerText;
               let color = "green";
-              if (listTypeState == "Whitelist"){
-                   listTypeState = "Blacklist";
-                   color = "red";
+              if (listTypeState === "Whitelist"){
+                  listTypeState = "Blacklist";
+                  color = "#c82333";
               } else {
-                   if (listTypeState == "Blacklist"){
-                       listTypeState = "Whitelist";
-                       color = "green";
-                   }
+                  listTypeState = "Whitelist";
+                  color = "green";
               }
               document.getElementById('toggle-list-type-button').style.background = color;
               document.getElementById('toggle-list-type-button').innerText = listTypeState;
@@ -577,12 +570,7 @@
               tags.forEach(function (tag) {
                   select2Filters[0].children.push({id: tag,
                                                    text: tag,
-                                                   parent: "tags",
-                                                   selected: (function (tag) {
-                                                   let jsoned = JSON.stringify({id: tag, parent: "tags"});
-                                                   return(whiteListFilters.has(jsoned) || blackListFilters.has(jsoned));})(tag)
-
-                                                   })
+                                                   parent: "tags"})
               });
 
               $(".dropdownfilters").html(""); // To prevent duplicate tags
@@ -592,30 +580,30 @@
                       placeholder: "Filter",
                       width: 'resolve',
                       templateSelection: function (data, container) {
-                         let color = $('#toggle-list-type-button').css("backgroundColor");
-                         if(! colors[data.id]) { 
-                         $(container).css("background-color", color);
-                         colors[data.id] = color;
-                         } else {
-                         $(container).css("background-color", colors[data.id]);
-                         }
-                         return data.text;
+                          let color = $('#toggle-list-type-button').css("backgroundColor");
+                          if(!colors[data.id]) {
+                              $(container).css("background-color", color);
+                              colors[data.id] = color;
+                          } else {
+                              $(container).css("background-color", colors[data.id]);
+                          }
+                          return data.text;
                       }
                   })
                   .on('select2:select', function (e) {
                       let listTypeState = document.getElementById('toggle-list-type-button').innerText;
                       if (listTypeState == "Whitelist") {
-                                   whiteListFilters.add(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
+                          whitelistFilters.add(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
                       }
                       if (listTypeState == "Blacklist") {
-                                   blackListFilters.add(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
+                          blacklistFilters.add(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
                       }
                       view.refresh()
                   })
                   .on('select2:unselect', function (e) {
                       //delete from both. doesn't matter because tag shouldn't be there any ways.
-                      whiteListFilters.delete(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
-                      blackListFilters.delete(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
+                      whitelistFilters.delete(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
+                      blacklistFilters.delete(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
 
                       //maintain color map
                       colors[e.params.data.id] = null;
