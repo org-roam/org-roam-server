@@ -144,6 +144,26 @@ the reload button."
   :group 'org-roam-server
   :type 'string)
 
+(defcustom org-roam-server-extra-node-options nil
+  "Additional options for nodes.
+A list suitable for `json-encode', e.g. (list (cons 'shape \"box\")), 
+or a custom function with one argument NODE producing such a list.
+In the first case options are applied to all nodes."
+  :group 'org-roam-server
+  :type '(choice
+          (list :tag "Argument to json-encode")
+          (function :tag "Custom function"))) 
+
+(defcustom org-roam-server-extra-edge-options nil
+  "Additional options for edges.
+A list suitable for `json-encode', e.g. (list (cons 'width 3)), 
+or a custom function with one argument EDGE producing such a list.
+In the first case options are applied to all edges."
+  :group 'org-roam-server
+  :type '(choice
+          (list :tag "Argument to json-encode")
+          (function :tag "Custom function"))) 
+
 (define-obsolete-variable-alias 'org-roam-server-label-wrap-length
   'org-roam-server-network-label-wrap-length "org-roam-server 1.0.3")
 (define-obsolete-variable-alias 'org-roam-server-label-truncate
@@ -222,7 +242,7 @@ This is added as a hook to `org-capture-after-finalize-hook'."
                (title (or (cadr (elt nodes idx))
                           (org-roam--path-to-slug file)))
                (tags (elt (elt nodes idx) 2)))
-          (push (list (cons 'id (org-roam--path-to-slug file))
+          (push (append (list (cons 'id (org-roam--path-to-slug file))
                       (cons 'title title)
                       (cons 'tags tags)
                       (cons 'label (s-word-wrap
@@ -235,13 +255,31 @@ This is added as a hook to `org-capture-after-finalize-hook'."
                       (cons 'url (concat "org-protocol://roam-file?file="
                                          (url-hexify-string file)))
                       (cons 'path file))
+                        (pcase org-roam-server-extra-node-options
+                          ('nil nil)
+                          ((pred functionp)
+                           (funcall org-roam-server-extra-node-options (elt nodes idx)))
+                          ((pred listp)
+                           org-roam-server-extra-node-options)
+                          (wrong-type
+                           (error "Wrong type of org-roam-server-extra-node-options: %s"
+                                  wrong-type))))
                 (cdr (elt graph 0)))))
       (dolist (edge edges)
         (let* ((title-source (org-roam--path-to-slug (elt edge 0)))
                (title-target (org-roam--path-to-slug (elt edge 1))))
-          (push (remove nil (list (cons 'from title-source)
-                                  (cons 'to title-target)
-                                  (cons 'arrows org-roam-server-network-arrows)))
+          (push (remove nil (append (list (cons 'from title-source)
+                                          (cons 'to title-target)
+                                          (cons 'arrows org-roam-server-network-arrows))
+                                    (pcase org-roam-server-extra-edge-options
+                                      ('nil nil)
+                                      ((pred functionp)
+                                       (funcall org-roam-server-extra-edge-options edge))
+                                      ((pred listp)
+                                       org-roam-server-extra-edge-options)
+                                      (wrong-type
+                                       (error "Wrong type of org-roam-server-extra-edge-options: %s"
+                                              wrong-type)))))
                 (cdr (elt graph 1)))))
       (dolist (edge edges-cites)
         (let* ((title-source (org-roam--path-to-slug (elt edge 0)))
