@@ -243,18 +243,18 @@ This is added as a hook to `org-capture-after-finalize-hook'."
                           (org-roam--path-to-slug file)))
                (tags (elt (elt nodes idx) 2)))
           (push (append (list (cons 'id (org-roam--path-to-slug file))
-                      (cons 'title title)
-                      (cons 'tags tags)
-                      (cons 'label (s-word-wrap
-                                    org-roam-server-network-label-wrap-length
-                                    (if org-roam-server-network-label-truncate
-                                        (s-truncate
-                                         org-roam-server-network-label-truncate-length
-                                         title)
-                                      title)))
-                      (cons 'url (concat "org-protocol://roam-file?file="
-                                         (url-hexify-string file)))
-                      (cons 'path file))
+                              (cons 'title title)
+                              (cons 'tags tags)
+                              (cons 'label (s-word-wrap
+                                            org-roam-server-network-label-wrap-length
+                                            (if org-roam-server-network-label-truncate
+                                                (s-truncate
+                                                 org-roam-server-network-label-truncate-length
+                                                 title)
+                                              title)))
+                              (cons 'url (concat "org-protocol://roam-file?file="
+                                                 (url-hexify-string file)))
+                              (cons 'path file))
                         (pcase org-roam-server-extra-node-options
                           ('nil nil)
                           ((pred functionp)

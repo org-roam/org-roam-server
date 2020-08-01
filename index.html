@@ -737,13 +737,15 @@
               // Also construct a set of tags
               tags = new Set();
               for (var nodeId in nodes) {
-                  var connectedNodes = tempNetwork.getConnectedNodes(nodeId)
-                  var degree = connectedNodes.length;
-                  nodes[nodeId].value = degree;
                   if (nodes[nodeId].tags) {
                       for (var i=0; i < nodes[nodeId].tags.length; i++ ) {
                           tags.add(nodes[nodeId].tags[i]);
                       }
+                  }
+                  if (!nodes[nodeId].value) {
+                      var connectedNodes = tempNetwork.getConnectedNodes(nodeId)
+                      var degree = connectedNodes.length;
+                      nodes[nodeId].value = degree;
                   }
               }
 
