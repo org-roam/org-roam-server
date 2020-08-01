@@ -214,7 +214,7 @@
         <input id="inputdistance" name="distance" type="number" value="1" min="0" pattern="\d+" />
       </div>
       <button class="btn btn-primary btn-danger btn-sm" id="toggle-list-type-button">
-        Blacklist
+        Exclusion
       </button>
       <button class="btn btn-primary btn-danger btn-sm" id="reload-button">
         Reload
@@ -372,16 +372,16 @@
           var nodeDataset = new vis.DataSet();
           var edgeDataset = new vis.DataSet();
 
-          var whitelistFilters = new Set();
-          var blacklistFilters = new Set();
+          var inclusionFilters = new Set();
+          var exclusionFilters = new Set();
           var colors = new Array();
           var view = new vis.DataView(nodeDataset, {
               filter: function (item) {
-                  //Blacklist has precidence
-                  if (blacklistFilters.size > 0) {
+                  //Exclusion has precidence
+                  if (exclusionFilters.size > 0) {
                       if (item.tags) {
                           let itemTags = new Set(item.tags);
-                          for (let filter of blacklistFilters.values()) {
+                          for (let filter of exclusionFilters.values()) {
                               var parsed_filter = JSON.parse(filter);
                               if (parsed_filter.parent === "tags"){
                                   if (itemTags.has(parsed_filter.id)){
@@ -391,10 +391,10 @@
                           }
                       }
                   }
-                  if (whitelistFilters.size > 0) {
+                  if (inclusionFilters.size > 0) {
                       if (item.tags) {
                           let itemTags = new Set(item.tags);
-                          for (let filter of whitelistFilters.values()) {
+                          for (let filter of inclusionFilters.values()) {
                               var parsed_filter = JSON.parse(filter);
                               if (parsed_filter.parent === "tags"){
                                   if (!itemTags.has(parsed_filter.id)) {
@@ -430,7 +430,7 @@
 
           function onStabilized () {
               // Update positions storage
-              if (blacklistFilters.size + whitelistFilters.size == 0) { // Save only if it is full network
+              if (exclusionFilters.size + inclusionFilters.size == 0) { // Save only if it is full network
                   localStorage.positions = JSON.stringify(globalNetwork.getPositions());
               }
           }
@@ -489,11 +489,11 @@
           $("#toggle-list-type-button").click(function() {
               let listTypeState = document.getElementById('toggle-list-type-button').innerText;
               let color = "green";
-              if (listTypeState === "Whitelist"){
-                  listTypeState = "Blacklist";
+              if (listTypeState === "Inclusion"){
+                  listTypeState = "Exclusion";
                   color = "#c82333";
               } else {
-                  listTypeState = "Whitelist";
+                  listTypeState = "Inclusion";
                   color = "green";
               }
               document.getElementById('toggle-list-type-button').style.background = color;
@@ -592,18 +592,18 @@
                   })
                   .on('select2:select', function (e) {
                       let listTypeState = document.getElementById('toggle-list-type-button').innerText;
-                      if (listTypeState == "Whitelist") {
-                          whitelistFilters.add(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
+                      if (listTypeState == "Inclusion") {
+                          inclusionFilters.add(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
                       }
-                      if (listTypeState == "Blacklist") {
-                          blacklistFilters.add(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
+                      if (listTypeState == "Exclusion") {
+                          exclusionFilters.add(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
                       }
                       view.refresh()
                   })
                   .on('select2:unselect', function (e) {
                       //delete from both. doesn't matter because tag shouldn't be there any ways.
-                      whitelistFilters.delete(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
-                      blacklistFilters.delete(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
+                      inclusionFilters.delete(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
+                      exclusionFilters.delete(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
 
                       //maintain color map
                       colors[e.params.data.id] = null;
