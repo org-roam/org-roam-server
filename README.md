@@ -48,6 +48,8 @@ Also make sure the emacs server is started; `M-x server-start RET`
 
 ## Expose Local files
 
+![Graph](https://raw.githubusercontent.com/wandersoncferreira/org-roam-server/master/expose-local-files.gif)
+
 If you want to expose your local files to be accessible through the Preview modal
 page you can check perform the following actions:
 
