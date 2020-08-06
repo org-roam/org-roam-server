@@ -222,10 +222,11 @@ In the first case options are applied to all edges."
          ;; Handle opening media in your computer
          (if org-roam-server-enable-access-to-local-files
              (let* ((file-string (buffer-string))
-                    (matches (s-match-strings-all (format "\\[\\[\\(file:\\)\\(.*\\.\\(%s\\)\\)\\]\\(\\[.*\\]\\)?\\]"
+                    (-regexp (format "\\[\\[\\(file:\\)\\(.*\\.\\(%s\\)\\)\\]\\(\\[.*\\]\\)?\\]"
                                                           (org-roam-server-concat-or-regexp-tokens
-                                                           org-roam-server-webserver-supported-extensions))
-                                                  file-string)))
+                                                           org-roam-server-webserver-supported-extensions)))
+                    (positions (s-matched-positions-all -regexp file-string))
+                    (matches (s-match-strings-all -regexp file-string)))
                (dolist (match matches)
                  (let ((path (elt match 2))
                        (link (elt match 0)))
@@ -239,8 +240,13 @@ In the first case options are applied to all edges."
                                                      (elt match 4))
                                         file-string)))))
                (erase-buffer)
-               (insert "#+HTML_HEAD: <base target=\"_blank\">\n")
-               (insert file-string)))
+               (insert file-string)
+               (if positions
+                   (dolist (p positions)
+                     (save-excursion
+                       (goto-char (car p))
+                       (previous-line)
+                       (insert "#+ATTR_HTML: :target _blank"))))))
 
          ;; Handle images
          (if org-roam-server-export-inline-images
