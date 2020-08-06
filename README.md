@@ -45,6 +45,31 @@ feature to work, org-roam protocol should be configured in the system.
 
 Also make sure the emacs server is started; `M-x server-start RET`
 
+
+## Expose Local files
+
+If you want to expose your local files to be accessible through the Preview modal
+page you can check perform the following actions:
+
+```elisp
+(setq org-roam-server-enable-access-to-local-files t
+      org-roam-server-webserver-prefix "/home/wand"
+      org-roam-server-webserver-address "127.0.0.1:8887/"
+      org-roam-server-webserver-supported-extensions '("pdf" "mp4" "ogv"))
+```
+
+There are security reasons your browse disable this feature to be used, however if you are aware of
+them and want to expose only in your local network your files, you can use a Web Server like
+[Web Server Chrome](https://chrome.google.com/webstore/detail/web-server-for-chrome/ofhbbkphhbklhfoeikjpcbhemlocgigb)
+and expose a specific *folder*.
+
+This *folder* needs to be setup in the `org-roam-server-webserver-prefix` and the address of the webserver
+configured at `org-roam-server-webserver-address` variable.
+
+Remember to keep your Web Server active in the background while navigating in your Roam Graph.
+
+Be safe, but also be happy.
+
 ## License
 org-roam-server is licensed under the MIT License.
 
