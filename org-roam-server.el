@@ -124,6 +124,26 @@ or { \"physics\": { \"enabled\": false } }"
   :group 'org-roam-server
   :type 'boolean)
 
+(defcustom org-roam-server-enable-access-to-local-files nil
+  "Enable access to your local files through a Web Server."
+  :group 'org-roam-server
+  :type 'boolean)
+
+(defcustom org-roam-server-webserver-address "127.0.0.1:8887/"
+  "Address to access your local web server."
+  :group 'org-roam-server
+  :type 'string)
+
+(defcustom org-roam-server-webserver-prefix nil
+  "Prefix of the folder being hosted by your webserver e.g. /home/."
+  :group 'org-roam-server
+  :type 'string)
+
+(defcustom org-roam-server-webserver-supported-extensions '("pdf" "mp4" "ogv")
+  "Supported file extensions to be opened by your browser."
+  :group 'org-roam-server
+  :type 'list)
+
 (defcustom org-roam-server-network-poll t
   "Poll the network changes if it is set to `t`.
 If you have a large network and experience lag
@@ -180,6 +200,13 @@ In the first case options are applied to all edges."
          (if (< x 10) (+ x ?0) (+ x (- ?a 10))))))
     (buffer-string)))
 
+(defun org-roam-server-concat-or-regexp-tokens (tokens)
+  "Concatenate TOKENS into OR regexp."
+  (let ((result (car tokens)))
+    (dolist (token (cdr tokens))
+      (setq result (format "%s\\|%s" result token)))
+    result))
+
 (defun org-roam-server-html-servlet (file)
   "Export the FILE to HTML and create a servlet for it."
   `(defservlet* ,(intern (concat (org-roam--path-to-slug file) ".html")) text/html (token)
@@ -191,6 +218,36 @@ In the first case options are applied to all edges."
          (setq-local org-export-with-sub-superscripts nil)
          (setq-local org-html-style-default org-roam-server-export-style)
          (insert-file-contents ,file)
+         
+         ;; Handle opening media in your computer
+         (if org-roam-server-enable-access-to-local-files
+             (let* ((file-string (buffer-string))
+                    (-regexp (format "\\[\\[\\(file:\\)\\(.*\\.\\(%s\\)\\)\\]\\(\\[.*\\]\\)?\\]"
+                                                          (org-roam-server-concat-or-regexp-tokens
+                                                           org-roam-server-webserver-supported-extensions)))
+                    (positions (s-matched-positions-all -regexp file-string))
+                    (matches (s-match-strings-all -regexp file-string)))
+               (dolist (match matches)
+                 (let ((path (elt match 2))
+                       (link (elt match 0)))
+                   (unless (file-name-absolute-p path)
+                     (setq path (concat (file-name-directory ,file) path)))
+                   (setq path (file-truename path))
+                   (if (file-exists-p path)
+                       (setq file-string
+                             (s-replace link (format "[[http://%s%s]%s]" org-roam-server-webserver-address
+                                                     (string-remove-prefix org-roam-server-webserver-prefix path)
+                                                     (elt match 4))
+                                        file-string)))))
+               (erase-buffer)
+               (insert file-string)
+               (if positions
+                   (dolist (p positions)
+                     (save-excursion
+                       (goto-char (car p))
+                       (previous-line)
+                       (insert "#+ATTR_HTML: :target _blank"))))))
+
          ;; Handle images
          (if org-roam-server-export-inline-images
              (let* ((file-string (buffer-string))
