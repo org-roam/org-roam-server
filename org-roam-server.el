@@ -124,7 +124,7 @@ or { \"physics\": { \"enabled\": false } }"
   :group 'org-roam-server
   :type 'boolean)
 
-(defcustom org-roam-server-serve-files t
+(defcustom org-roam-server-serve-files nil
   "Serve local files when `t`."
   :group 'org-roam-server
   :type 'boolean)
