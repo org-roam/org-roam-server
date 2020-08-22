@@ -384,8 +384,11 @@ DESCRIPTION is the shown attribute to the user."
      (if org-roam-server-authenticate
          (if (not (string= org-roam-server-token token))
              (httpd-error httpd-current-proc 403)))
-     (set-buffer-multibyte nil)
-     (insert-file-contents-literally ,(elt file 2))))
+     (if org-roam-server-serve-files
+         (progn
+           (set-buffer-multibyte nil)
+           (insert-file-contents-literally ,(elt file 2)))
+       (httpd-error httpd-current-proc 403))))
 
 (defun org-roam-server-export-file-id (link description format)
   "Append token to the file links.
