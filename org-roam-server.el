@@ -174,6 +174,20 @@ In the first case options are applied to all edges."
           (list :tag "Argument to json-encode")
           (function :tag "Custom function")))
 
+(defcustom org-roam-server-default-include-filters "null"
+  "Options to set default include filters, in JSON format.
+e.g. (json-encode (list (list (cons 'id \"test\") (cons 'parent \"tags\"))))
+or [{ \"id\": \"test\", \"parent\" : \"tags\"  }]"
+  :group 'org-roam-server
+  :type 'string)
+
+(defcustom org-roam-server-default-exclude-filters "null"
+  "Options to set default exclude filters, in JSON format.
+e.g. (json-encode (list (list (cons 'id \"test\") (cons 'parent \"tags\"))))
+or [{ \"id\": \"test\", \"parent\" : \"tags\"  }]"
+  :group 'org-roam-server
+  :type 'string)
+
 (define-obsolete-variable-alias 'org-roam-server-label-wrap-length
   'org-roam-server-network-label-wrap-length "org-roam-server 1.0.3")
 (define-obsolete-variable-alias 'org-roam-server-label-truncate
@@ -518,7 +532,15 @@ DESCRIPTION is the shown attribute to the user if the image is not rendered."
   (if org-roam-server-authenticate
       (if (not (string= org-roam-server-token token))
           (httpd-error httpd-current-proc 403)))
-  (insert org-roam-server-style))
+  (insert (or org-roam-server-style ":empty")))
+
+(defservlet* default-filters application/json (token)
+  (if org-roam-server-authenticate
+      (if (not (string= org-roam-server-token token))
+          (httpd-error httpd-current-proc 403)))
+  (insert (format "{\"include\" : %s, \"exclude\": %s}"
+                  org-roam-server-default-include-filters
+                  org-roam-server-default-exclude-filters)))
 
 (defun org-roam-server-insert-title (title)
   "Insert the TITLE as `org-document-title`."

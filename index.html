@@ -278,6 +278,31 @@
               }
           });
 
+          var includeFilters = new Set();
+          var excludeFilters = new Set();
+          var defaultIncludeFilters = [];
+          var defaultExcludeFilters = [];
+
+          $.ajax({
+              async: false,
+              type: 'GET',
+              url: `/default-filters?token=${token}`,
+              success: function(data) {
+                  if (data.include) {
+                      for (var i = 0; i < data.include.length; i++) {
+                          includeFilters.add(JSON.stringify(data.include[i]));
+                          defaultIncludeFilters.push(data.include[i].id);
+                      }
+                  }
+                  if (data.exclude) {
+                      for (var i = 0; i < data.exclude.length; i++) {
+                          excludeFilters.add(JSON.stringify(data.exclude[i]));
+                          defaultExcludeFilters.push(data.exclude[i].id);
+                      }
+                  }
+              }
+          });
+
           var previewFrame = document.getElementById("preview-frame"); // div
           var hoverNode = document.getElementById("hovernode"); // iframe
           var globalNetwork;
@@ -373,8 +398,6 @@
           var nodeDataset = new vis.DataSet();
           var edgeDataset = new vis.DataSet();
 
-          var includeFilters = new Set();
-          var excludeFilters = new Set();
           var colors = new Array();
           var view = new vis.DataView(nodeDataset, {
               filter: function (item) {
@@ -431,9 +454,7 @@
 
           function onStabilized () {
               // Update positions storage
-              if (excludeFilters.size + includeFilters.size == 0) { // Save only if it is full network
-                  localStorage.positions = JSON.stringify(globalNetwork.getPositions());
-              }
+              localStorage.positions = JSON.stringify(globalNetwork.getPositions());
           }
 
           var currentNode;
@@ -575,14 +596,14 @@
               });
 
               $(".dropdownfilters").html(""); // To prevent duplicate tags
-              $(".dropdownfilters")
+              var s2filters = $(".dropdownfilters")
                   .select2({
                       data: select2Filters,
                       placeholder: "Filter",
                       width: 'resolve',
                       templateSelection: function (data, container) {
-                          let color = $('#toggle-list-type-button').css("backgroundColor");
                           if(!colors[data.id]) {
+                              color = $('#toggle-list-type-button').css("backgroundColor");
                               $(container).css("background-color", color);
                               colors[data.id] = color;
                           } else {
@@ -610,6 +631,14 @@
                       colors[e.params.data.id] = null;
                       view.refresh()
                   });
+
+              for (var i = 0; i < defaultIncludeFilters.length; i++) {
+                  colors[defaultIncludeFilters[i]] = "green";
+              }
+              for (var i = 0; i < defaultExcludeFilters.length; i++) {
+                  colors[defaultExcludeFilters[i]] = "#c82333";
+              }
+              s2filters.val(defaultIncludeFilters.concat(defaultExcludeFilters)).trigger('change');
 
               $("#filenode").on("load", function () {
                   var string = document.getElementById("filenode").contentWindow.location.href;
@@ -717,7 +746,7 @@
               edgeDataset.clear();
               edgeDataset.update(roamData.edges);
               var nodes = tempDataset.get({returnType:"Object"});
-              if (localStorage.positions) {
+              if (localStorage.positions && !jQuery.isEmptyObject(localStorage.positions)) {
                   var structuredPositions = []
                   var positions = JSON.parse(localStorage.positions);
                   for (var key in positions) {
