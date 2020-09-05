@@ -3,7 +3,7 @@
 ;; Author: Göktuğ Karakaşlı <karakasligk@gmail.com>
 ;; URL: https://github.com/goktug97/org-roam-server
 ;; Version: 1.0.5
-;; Package-Requires: ((org-roam "1.2.1") (org "9.3") (emacs "26.1") (dash "2.17.0") (simple-httpd "1.5.1") (s "1.12.0"))
+;; Package-Requires: ((org-roam "1.2.1") (org "9.3") (emacs "26.1") (dash "2.17.0") (simple-httpd "1.5.1") (s "1.12.0") (f 0.20.0))
 
 ;; MIT License
 
@@ -36,6 +36,7 @@
 (require 'subr-x)
 (require 'url)
 
+(require 'f)
 (require 's)
 (require 'dash)
 (require 'simple-httpd)
@@ -59,9 +60,9 @@
 
 (defvar org-roam-server-root
   (concat (file-name-directory
-           (file-truename (or
-                           load-file-name
-                           buffer-file-name)))
+           (f-full (or
+                    load-file-name
+                    buffer-file-name)))
           "."))
 
 (defgroup org-roam-server nil
@@ -274,7 +275,7 @@ or [{ \"id\": \"test\", \"parent\" : \"tags\"  }]"
                        (link (elt match 0)))
                    (unless (file-name-absolute-p path)
                      (setq path (concat (file-name-directory ,file) path)))
-                   (setq path (file-truename path))
+                   (setq path (f-full path))
                    (if (file-exists-p path)
                        (setq file-string
                              (s-replace link (format "[[image:%s]]" path) file-string)))))
@@ -569,7 +570,7 @@ DESCRIPTION is the shown attribute to the user if the image is not rendered."
                 (insert (s-trim
                          (s-replace "\n" " "
                                     (s-replace
-                                     (format "file:%s" (file-truename org-roam-directory))
+                                     (format "file:%s" (f-full org-roam-directory))
                                      "server:" (plist-get props :content)))))
                 (insert "\n\n"))))))
     (insert "\n\n* No cite backlinks!")))
@@ -594,7 +595,7 @@ DESCRIPTION is the shown attribute to the user if the image is not rendered."
                     (insert (s-trim
                              (s-replace "\n" " "
                                         (s-replace
-                                         (format "file:%s" (file-truename org-roam-directory))
+                                         (format "file:%s" (f-full org-roam-directory))
                                          "server:" (plist-get props :content)))))
                     (insert "\n\n"))))))
         (insert "\n\n* No backlinks!"))))
