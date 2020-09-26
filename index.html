@@ -326,6 +326,7 @@
               }
           });
 
+          var currentFilenodePath;
           var previewFrame = document.getElementById("preview-frame"); // div
           var hoverNode = document.getElementById("hovernode"); // iframe
           var globalNetwork;
@@ -352,15 +353,18 @@
 
           $("#fileframe #edit-button")
               .on("click", function iframeGoEdit() {
-                  url = "org-protocol://roam-file?file=".concat(filenodePath);
+                  const url = "org-protocol://roam-file?file="
+                        .concat(currentFilenodePath);
                   window.open(url, "_self");
               });
 
           function onWindowResize () {
               $("#filenode").width(($(window).width() - 50) * 0.7);
               $("#backlinks").width(($(window).width() - 50) * 0.3);
-              $("#filenode").height($(window).height() - $("#view-menu").height() - 50);
-              $("#backlinks").height($(window).height() - $("#view-menu").height() - 50);
+              $("#filenode").height($(window).height() -
+                                    $("#view-menu").height() - 50);
+              $("#backlinks").height($(window).height() -
+                                     $("#view-menu").height() - 50);
           }
           onWindowResize();
           window.onresize = onWindowResize;
@@ -664,7 +668,7 @@
                       if (select2Data[i].id === string) {
                           link = `org-roam-buffer?path=${select2Data[i].path}&` +
                               `label=${select2Data[i].text}&token=${token}`;
-                          filenodePath = select2Data[i].path;
+                          currentFilenodePath = select2Data[i].path;
                           break
                       }
                   }
