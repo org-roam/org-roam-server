@@ -55,6 +55,13 @@
           z-index: 101;
       }
 
+      #edit-button {
+          display: block;
+          position: absolute;
+          left: 5em;
+          z-index: 101;
+      }
+
       #view-menu {
           position: absolute;
           right: 0;
@@ -239,6 +246,7 @@
     <div id="temp-network"></div>
     <div class="fileframe" id="fileframe">
       <button class="btn btn-link float-left" id="iframe-button">Back</button>
+      <button class="btn btn-link" id="edit-button">Edit</button>
       <iframe src="" id="filenode"></iframe>
       <iframe src="" id="backlinks"></iframe>
     </div>
@@ -340,6 +348,12 @@
                       $("#fileframe").css("display", "none");
                   }
                   window.history.back()
+              });
+
+          $("#fileframe #edit-button")
+              .on("click", function iframeGoEdit() {
+                  url = "org-protocol://roam-file?file=".concat(filenodePath);
+                  window.open(url, "_self");
               });
 
           function onWindowResize () {
@@ -650,6 +664,7 @@
                       if (select2Data[i].id === string) {
                           link = `org-roam-buffer?path=${select2Data[i].path}&` +
                               `label=${select2Data[i].text}&token=${token}`;
+                          filenodePath = select2Data[i].path;
                           break
                       }
                   }
