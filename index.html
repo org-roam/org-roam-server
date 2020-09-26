@@ -145,7 +145,10 @@
       .darkmode .select2-container--default .select2-selection--multiple,
       .darkmode .select2-search--dropdown,
       .darkmode .select2-results,
-      .darkmode .select2-container--default .select2-selection--multiple .select2-selection__choice {
+      .darkmode
+          .select2-container--default
+          .select2-selection--multiple
+          .select2-selection__choice {
           background-color: #1d1e20;
       }
 
@@ -163,7 +166,9 @@
       </select>
     </div>
     <div class="box" id="preview-frame">
-      <button class="btn btn-link float-left" id="iframe-button" onclick="history.back()">Back</button>
+      <button class="btn btn-link float-left"
+              id="iframe-button"
+              onclick="history.back()"> Back </button>
       <iframe src="" id="hovernode">
       </iframe>
     </div>
@@ -175,7 +180,8 @@
              data-size="small" id="colormode-checkbox">
     </label>
 
-    <div class="btn-group btn-group-toggle float-right" data-toggle="buttons" id="view-menu">
+    <div class="btn-group btn-group-toggle float-right"
+         data-toggle="buttons" id="view-menu">
       <label class="btn btn-sm btn-primary btn-simple active" id="globalview">
         <input type="radio" name="views" checked id="global" value="global">
         <span class="d-none d-sm-block d-md-block
@@ -201,7 +207,8 @@
 
     <div id="controls">
       <div id="dropdownfilters">
-        <select class="dropdownfilters" name="tags" multiple="multiple" style="width: 100%;">
+        <select class="dropdownfilters" name="tags"
+                multiple="multiple" style="width: 100%;">
           <option></option>
         </select>
       </div>
@@ -212,7 +219,8 @@
       </div>
       <div id="formdistance">
         <label for="distance">Distance: </label>
-        <input id="inputdistance" name="distance" type="number" value="1" min="0" pattern="\d+" />
+        <input id="inputdistance" name="distance"
+               type="number" value="1" min="0" pattern="\d+" />
       </div>
       <button class="btn btn-primary btn-danger btn-sm" id="toggle-list-type-button">
         Exclude
@@ -242,9 +250,9 @@
           if (this.length === 0) return null;
           if (this.length === 1) return this[0];
           compare = (compare || Math.max);
-          var v = this[0];
-          for (var i = 1; i < this.length; i++) {
-              var ret = compare(this[i], v);
+          let v = this[0];
+          for (let i = 1; i < this.length; i++) {
+              let ret = compare(this[i], v);
               if (ret > 0) {
                   v = this[i];
               }
@@ -252,8 +260,8 @@
           return v;
       }
 
-      var urlParams = new URLSearchParams(window.location.search);
-      var token = urlParams.get('token');
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get('token');
 
       $(window).on("load", function () {
           var customNetworkOptions = {}
@@ -280,8 +288,13 @@
 
           var includeFilters = new Set();
           var excludeFilters = new Set();
+          const FilterEnum = Object.freeze({"exclude":0, "include":1})
+          const filters = [excludeFilters, includeFilters];
+          let filterState = FilterEnum.exclude;
           var defaultIncludeFilters = [];
           var defaultExcludeFilters = [];
+          const filterButtonTitles = ['Exclude', 'Include'];
+          const filterButtonColors = ['#c82333', 'green'];
 
           $.ajax({
               async: false,
@@ -289,14 +302,16 @@
               url: `/default-filters?token=${token}`,
               success: function(data) {
                   if (data.include) {
-                      for (var i = 0; i < data.include.length; i++) {
-                          includeFilters.add(JSON.stringify(data.include[i]));
+                      for (let i = 0; i < data.include.length; i++) {
+                          filters[FilterEnum.include]
+                              .add(JSON.stringify(data.include[i]));
                           defaultIncludeFilters.push(data.include[i].id);
                       }
                   }
                   if (data.exclude) {
-                      for (var i = 0; i < data.exclude.length; i++) {
-                          excludeFilters.add(JSON.stringify(data.exclude[i]));
+                      for (let i = 0; i < data.exclude.length; i++) {
+                          filters[FilterEnum.exclude]
+                              .add(JSON.stringify(data.exclude[i]));
                           defaultExcludeFilters.push(data.exclude[i].id);
                       }
                   }
@@ -308,7 +323,7 @@
           var globalNetwork;
           var bufferNetwork;
 
-          var transformString =
+          let transformString =
               `translateX(25px)`+
               `translateY(${($("#view-menu").height() + 50)/2}px)`;
           $("#fileframe").css("webkitTransform", transformString);
@@ -332,7 +347,7 @@
               $("#backlinks").width(($(window).width() - 50) * 0.3);
               $("#filenode").height($(window).height() - $("#view-menu").height() - 50);
               $("#backlinks").height($(window).height() - $("#view-menu").height() - 50);
-          };
+          }
           onWindowResize();
           window.onresize = onWindowResize;
 
@@ -398,36 +413,28 @@
           var nodeDataset = new vis.DataSet();
           var edgeDataset = new vis.DataSet();
 
-          var colors = new Array();
+          var filterColors = new Array();
           var view = new vis.DataView(nodeDataset, {
               filter: function (item) {
-                  //Exclude has precidence
-                  if (excludeFilters.size > 0) {
-                      if (item.tags) {
-                          let itemTags = new Set(item.tags);
-                          for (let filter of excludeFilters.values()) {
-                              var parsed_filter = JSON.parse(filter);
-                              if (parsed_filter.parent === "tags"){
-                                  if (itemTags.has(parsed_filter.id)){
-                                      return false;
+                  let parsed_filter;
+                  for (let i = 0; i < filters.length; i++) {
+                      if (filters[i].size > 0) {
+                          if (item.tags) {
+                              let itemTags = new Set(item.tags);
+                              for (let filter of filters[i].values()) {
+                                  parsed_filter = JSON.parse(filter);
+                                  if (parsed_filter.parent === "tags"){
+                                      if ((i == FilterEnum.include ^
+                                           itemTags.has(parsed_filter.id))) {
+                                          return false;
+                                      }
                                   }
                               }
-                          }
-                      }
-                  }
-                  if (includeFilters.size > 0) {
-                      if (item.tags) {
-                          let itemTags = new Set(item.tags);
-                          for (let filter of includeFilters.values()) {
-                              var parsed_filter = JSON.parse(filter);
-                              if (parsed_filter.parent === "tags"){
-                                  if (!itemTags.has(parsed_filter.id)) {
-                                      return false;
-                                  }
+                          } else {
+                              if (i == FilterEnum.include) {
+                                  return false;
                               }
                           }
-                      } else {
-                          return false;
                       }
                   }
                   return true;
@@ -493,8 +500,7 @@
 
                   roamSource = new EventSource(`/roam-data?token=${token}`);
                   roamSource.onmessage = function (event) {
-                      var parsed_data = JSON.parse(event.data);
-                      roamData = parsed_data;
+                      roamData = JSON.parse(event.data);
                       update();
                   }
               });
@@ -509,17 +515,9 @@
           });
 
           $("#toggle-list-type-button").click(function() {
-              let listTypeState = document.getElementById('toggle-list-type-button').innerText;
-              let color = "green";
-              if (listTypeState === "Include"){
-                  listTypeState = "Exclude";
-                  color = "#c82333";
-              } else {
-                  listTypeState = "Include";
-                  color = "green";
-              }
-              document.getElementById('toggle-list-type-button').style.background = color;
-              document.getElementById('toggle-list-type-button').innerText = listTypeState;
+              filterState = (filterState + 1) % filters.length;
+              $(this).css('background', filterButtonColors[filterState]);
+              $(this).text(filterButtonTitles[filterState]);
           });
 
           function update () {
@@ -534,8 +532,8 @@
           }
 
           function iframeSetColor(id, background, color) {
-              var iframe = document.getElementById(id).contentDocument.body;
-              var transition = "background-color 500ms ease-out"
+              let iframe = document.getElementById(id).contentDocument.body;
+              let transition = "background-color 500ms ease-out"
               iframe.style.webkitTransition = transition;
               iframe.style.MozTransition = transition;
               iframe.style.msTransition = transition;
@@ -544,17 +542,16 @@
               iframe.style.backgroundColor  = background;
 
               iframe.style.color = color;
-              var h1s = document.getElementById(id)
+              let h1s = document.getElementById(id)
                   .contentDocument.getElementsByTagName("h1");
-              for (var i = 0; i < h1s.length; i++) {
-                  var h1 = h1s[i];
-                  h1.style.color = color;
+              for (let i = 0; i < h1s.length; i++) {
+                  h1s[i].style.color = color;
               }
           }
 
           function updateDropdown() {
               var select2Data = [];
-              for (var i = 0 ; i < roamData.nodes.length; i++) {
+              for (let i = 0 ; i < roamData.nodes.length; i++) {
                   select2Data.push({id: roamData.nodes[i].id,
                                     text: roamData.nodes[i].title,
                                     path: roamData.nodes[i].path})
@@ -585,10 +582,11 @@
                           // to prevent flickering
                           $("#fileframe").css("display", "none");
                       }
-                      $("#filenode").attr("src", e.params.data.id.concat(`.html?token=${token}`));
+                      $("#filenode")
+                          .attr("src", e.params.data.id.concat(`.html?token=${token}`));
                   });
 
-              var select2Filters = [{id: "tags", text: "Tags", children: []}];
+              let select2Filters = [{id: "tags", text: "Tags", children: []}];
               tags.forEach(function (tag) {
                   select2Filters[0].children.push({id: tag,
                                                    text: tag,
@@ -596,64 +594,69 @@
               });
 
               $(".dropdownfilters").html(""); // To prevent duplicate tags
-              var s2filters = $(".dropdownfilters")
+              let s2filters = $(".dropdownfilters")
                   .select2({
                       data: select2Filters,
                       placeholder: "Filter",
                       width: 'resolve',
                       templateSelection: function (data, container) {
-                          if(!colors[data.id]) {
-                              color = $('#toggle-list-type-button').css("backgroundColor");
+                          if(!filterColors[data.id]) {
+                              const color = $('#toggle-list-type-button').
+                                    css("backgroundColor");
                               $(container).css("background-color", color);
-                              colors[data.id] = color;
+                              filterColors[data.id] = color;
                           } else {
-                              $(container).css("background-color", colors[data.id]);
+                              $(container).css("background-color",
+                                               filterColors[data.id]);
                           }
                           return data.text;
                       }
                   })
                   .on('select2:select', function (e) {
-                      let listTypeState = document.getElementById('toggle-list-type-button').innerText;
-                      if (listTypeState == "Include") {
-                          includeFilters.add(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
-                      }
-                      if (listTypeState == "Exclude") {
-                          excludeFilters.add(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
-                      }
+                      filters[filterState].add(JSON.stringify(
+                          {id: e.params.data.id, parent: e.params.data.parent}));
                       view.refresh()
                   })
                   .on('select2:unselect', function (e) {
-                      //delete from both. doesn't matter because tag shouldn't be there any ways.
-                      includeFilters.delete(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
-                      excludeFilters.delete(JSON.stringify({id: e.params.data.id, parent: e.params.data.parent}));
+                      for (let i = 0; i < filters.length; i++) {
+                          filters[i].delete(
+                              JSON.stringify({id: e.params.data.id,
+                                              parent: e.params.data.parent}));
+                      }
 
                       //maintain color map
-                      colors[e.params.data.id] = null;
+                      filterColors[e.params.data.id] = null;
                       view.refresh()
                   });
 
-              for (var i = 0; i < defaultIncludeFilters.length; i++) {
-                  colors[defaultIncludeFilters[i]] = "green";
+              for (let i = 0; i < defaultIncludeFilters.length; i++) {
+                  filterColors[defaultIncludeFilters[i]] =
+                      filterButtonColors[FilterEnum.include];
               }
-              for (var i = 0; i < defaultExcludeFilters.length; i++) {
-                  colors[defaultExcludeFilters[i]] = "#c82333";
+              for (let i = 0; i < defaultExcludeFilters.length; i++) {
+                  filterColors[defaultExcludeFilters[i]] =
+                      filterButtonColors[FilterEnum.exclude];
               }
-              s2filters.val(defaultIncludeFilters.concat(defaultExcludeFilters)).trigger('change');
+              s2filters.val(defaultIncludeFilters.concat(defaultExcludeFilters))
+                  .trigger('change');
 
               $("#filenode").on("load", function () {
-                  var string = document.getElementById("filenode").contentWindow.location.href;
+                  let string = document.getElementById("filenode")
+                      .contentWindow.location.href;
                   string = string.substring(string.lastIndexOf('/') + 1);
                   string = string.substring(0, string.lastIndexOf('.'));
-                  for (var i = 0; i < select2Data.length; i++) {
+                  let link;
+                  for (let i = 0; i < select2Data.length; i++) {
                       if (select2Data[i].id === string) {
-                          var link = `org-roam-buffer?path=${select2Data[i].path}&label=${select2Data[i].text}&token=${token}`;
+                          link = `org-roam-buffer?path=${select2Data[i].path}&` +
+                              `label=${select2Data[i].text}&token=${token}`;
                           break
                       }
                   }
 
-                  var links = document.getElementById("filenode")
-                      .contentWindow.document.getElementsByTagName("a");
-                  for (var i = 0; i < links.length; i++) {
+                  const links = document.getElementById("filenode")
+                        .contentWindow.document.getElementsByTagName("a");
+                  for (let i = 0; i < links.length; i++) {
                       links[i].onclick = function () {
                           if (darkmode) {
                               // Hide iframes until the page is loaded
@@ -665,14 +668,19 @@
 
                   $("#backlinks").attr("src", link);
                   $('#backlinks').on('load', function() {
-                      var links = document.getElementById("backlinks")
-                          .contentWindow.document.getElementsByName("backlink");
-                      for (var i = 0; i < links.length; i++) {
+                      const links = document.getElementById("backlinks")
+                            .contentWindow.document.getElementsByName("backlink");
+                      let url;
+                      let base_location;
+                      for (let i = 0; i < links.length; i++) {
                           links[i].onclick = function () {
                               url = this.id.substring(0, this.id.lastIndexOf('.'));
                               url = url.concat(".html");
-                              base_location = document.getElementById("filenode").contentWindow.location;
-                              url = `${base_location.protocol}//${base_location.host}/${url}?token=${token}`
+                              base_location = document.getElementById("filenode")
+                                  .contentWindow.location;
+                              url = `${base_location.protocol}//`+
+                                  `${base_location.host}/`+
+                                  `${url}?token=${token}`
                               if (darkmode) {
                                   // Hide iframes until the page is loaded
                                   // to prevent flickering
@@ -741,16 +749,17 @@
           $("#inputdistance").on("input", drawBufferNetwork);
 
           function updateNodesAndEdges () {
-              var tempDataset = new vis.DataSet(roamData.nodes);
+              const tempDataset = new vis.DataSet(roamData.nodes);
               nodeDataset.update(roamData.nodes);
               edgeDataset.clear();
               edgeDataset.update(roamData.edges);
-              var nodes = tempDataset.get({returnType:"Object"});
-              if (localStorage.positions && !jQuery.isEmptyObject(localStorage.positions)) {
-                  var structuredPositions = []
-                  var positions = JSON.parse(localStorage.positions);
-                  for (var key in positions) {
-                      if (positions.hasOwnProperty(key)) {
+              const nodes = tempDataset.get({returnType:"Object"});
+              if (localStorage.positions &&
+                  !jQuery.isEmptyObject(localStorage.positions)) {
+                  let structuredPositions = []
+                  const positions = JSON.parse(localStorage.positions);
+                  for (let key in positions) {
+                      if (Object.prototype.hasOwnProperty.call(positions, key)) {
                           if (nodes[key]) { // Check if it is removed from the database
                               structuredPositions.push({id: key,
                                                         x: positions[key].x,
@@ -766,16 +775,14 @@
               // Set value depending on the number of connected nodes
               // Also construct a set of tags
               tags = new Set();
-              for (var nodeId in nodes) {
+              for (let nodeId in nodes) {
                   if (nodes[nodeId].tags) {
-                      for (var i=0; i < nodes[nodeId].tags.length; i++ ) {
+                      for (let i = 0; i < nodes[nodeId].tags.length; i++ ) {
                           tags.add(nodes[nodeId].tags[i]);
                       }
                   }
                   if (!nodes[nodeId].value) {
-                      var connectedNodes = tempNetwork.getConnectedNodes(nodeId)
-                      var degree = connectedNodes.length;
-                      nodes[nodeId].value = degree;
+                      nodes[nodeId].value = tempNetwork.getConnectedNodes(nodeId).length;
                   }
               }
 
@@ -784,15 +791,14 @@
               }
 
               // Group the nodes
-              var keys = Object.keys(nodes);
-              keys.sort(compareNodeValues);
-              var group = 0;
-              for (var i = 0; i < keys.length; i++) {
-                  k = keys[i];
+              let group = 0;
+              const keys = Object.keys(nodes).sort(compareNodeValues);
+              for (let i = 0; i < keys.length; i++) {
+                  const k = keys[i];
                   if (!nodes[k].group) {
-                      var connectedNodes = tempNetwork.getConnectedNodes(k);
+                      const connectedNodes = tempNetwork.getConnectedNodes(k);
                       if (connectedNodes.length > 0) {
-                          node = connectedNodes.max(compareNodeValues);
+                          const node = connectedNodes.max(compareNodeValues);
                           if (!nodes[node].group) {
                               nodes[node].group = group;
                               group += 1;
@@ -806,9 +812,9 @@
               }
 
               // Update the dataset
-              var updateArray = [];
-              for (nodeId in nodes) {
-                  if (nodes.hasOwnProperty(nodeId)) {
+              let updateArray = [];
+              for (let nodeId in nodes) {
+                  if (Object.prototype.hasOwnProperty.call(nodes, nodeId)) {
                       updateArray.push(nodes[nodeId]);
                   }
               }
@@ -820,7 +826,7 @@
 
           function onNodeClick(params) {
               if (params.nodes.length === 1) {
-                  var node = params.nodes[0];
+                  let node = params.nodes[0];
                   window.open(tempNetwork.body.nodes[node].options.url,
                               "_self");
                   currentNode = node;
@@ -838,8 +844,8 @@
                   hoverNode.src = params.node.concat(`.html?token=${token}`);
                   $('#hovernode').on('load', function() {
                       if (nodeHovered) {
-                          var x = params.event.clientX;
-                          var y = params.event.clientY;
+                          let x = params.event.clientX;
+                          let y = params.event.clientY;
 
                           $("#hovernode").width(
                               Math.abs($(window).width()/2 - x) +
@@ -857,7 +863,7 @@
                           }
 
                           // Move previewFrame to the hovered node's position
-                          var transformString =
+                          let transformString =
                               `translateX(${x}px)`+
                               `translateY(${y}px)`;
                           previewFrame.style.webkitTransform = transformString;
@@ -878,43 +884,45 @@
               }
           }
 
-          function onNodeBlur(params) {
+          function onNodeBlur() {
               nodeHovered = false;
               previewFrame.style.display = "none";
           }
 
-          function collectConnectedNodes(allNodes, baseNode, distance, alreadyConnected) {
+          function collectConnectedNodes(
+              allNodes, baseNode, distance, alreadyConnected) {
               if (distance < 1) {
                   return new Set([baseNode]); // base case for recursion
               }
 
-              var connectedNodes = new Set([baseNode]);
-              var neighbours = tempNetwork.getConnectedNodes(baseNode);
+              let connectedNodes = new Set([baseNode]);
+              const neighbours = tempNetwork.getConnectedNodes(baseNode);
 
-              for (var i = 0; i < neighbours.length; i++) {
-                  // Skip this node if we've already seen it. Helps with performance. I think this is
-                  // safe: If we've already seen a node, the distance when we saw it originally must
-                  // have been at least as high as it is now, so we would have done at least as much
-                  // traversal as we're skipping.
+              for (let i = 0; i < neighbours.length; i++) {
+                  // Skip this node if we've already seen it. Helps with the performance.
                   if (alreadyConnected && alreadyConnected.has(neighbours[i])) continue;
-                  var neighbourConnectedNodes = collectConnectedNodes(allNodes, neighbours[i], distance - 1, connectedNodes);
-                  for (var node of neighbourConnectedNodes) {
+                  var neighbourConnectedNodes = collectConnectedNodes(
+                      allNodes, neighbours[i], distance - 1, connectedNodes);
+                  for (let node of neighbourConnectedNodes) {
                       connectedNodes.add(node);
                   }
               }
-
               return connectedNodes;
           }
 
           function drawBufferNetwork() {
-              var nodeDataset = new vis.DataSet(roamData.nodes);
-              var nodes = nodeDataset.get({returnType:"Object"});
-              var connectedNodes = Array.from(collectConnectedNodes(nodes, currentNode, parseInt(document.getElementById('inputdistance').value)));
-              var bufferNodes = [];
-              for (var i = 0; i < connectedNodes.length; i++) {
+              const nodeDataset = new vis.DataSet(roamData.nodes);
+              const nodes = nodeDataset.get({returnType:"Object"});
+              const connectedNodes = Array.from(
+                  collectConnectedNodes(
+                      nodes,
+                      currentNode,
+                      parseInt(document.getElementById('inputdistance').value)));
+              let bufferNodes = [];
+              for (let i = 0; i < connectedNodes.length; i++) {
                   bufferNodes.push(nodes[connectedNodes[i]]);
               }
-              var bufferContainer = document.getElementById("buffer-network");
+              const bufferContainer = document.getElementById("buffer-network");
               bufferNetwork = new vis.Network(
                   bufferContainer,
                   {nodes:bufferNodes,
