@@ -328,7 +328,6 @@
               }
           });
 
-          var currentFilenodePath;
           var previewFrame = document.getElementById("preview-frame"); // div
           var hoverNode = document.getElementById("hovernode"); // iframe
           var globalNetwork;
@@ -355,9 +354,17 @@
 
           $("#fileframe #edit-button")
               .on("click", function () {
-                  const url = "org-protocol://roam-file?file="
-                        .concat(currentFilenodePath);
-                  window.open(url, "_self");
+                  const url = $('#filenode').attr('src');
+                  let string = url.substring(0, url.lastIndexOf('?'));
+                  string = string.substring(0, string.lastIndexOf('.'));
+                  for (let i = 0; i < select2Data.length; i++) {
+                      if (select2Data[i].id === string) {
+                          window.open("org-protocol://roam-file?file="
+                                      .concat(select2Data[i].path),
+                                      "_self");
+                          break
+                      }
+                  }
               });
 
           $("#fileframe #refresh-button")
@@ -579,8 +586,9 @@
               }
           }
 
+          var select2Data = [];
           function updateDropdown() {
-              var select2Data = [];
+              select2Data = [];
               for (let i = 0 ; i < roamData.nodes.length; i++) {
                   select2Data.push({id: roamData.nodes[i].id,
                                     text: roamData.nodes[i].title,
@@ -680,7 +688,6 @@
                       if (select2Data[i].id === string) {
                           link = `org-roam-buffer?path=${select2Data[i].path}&` +
                               `label=${select2Data[i].text}&token=${token}`;
-                          currentFilenodePath = select2Data[i].path;
                           break
                       }
                   }
