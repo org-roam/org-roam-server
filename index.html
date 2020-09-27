@@ -349,14 +349,15 @@
                       // to prevent flickering
                       $("#fileframe").css("display", "none");
                   }
-                  window.history.back()
+                  window.history.back();
               });
 
           $("#fileframe #edit-button")
               .on("click", function () {
-                  const url = $('#filenode').attr('src');
-                  let string = url.substring(0, url.lastIndexOf('?'));
-                  string = string.substring(0, string.lastIndexOf('.'));
+                  const url = new URL(document.getElementById("filenode")
+                                      .contentWindow.location.href);
+                  let string = url.pathname.substring(
+                      1, url.pathname.lastIndexOf('.'));
                   for (let i = 0; i < select2Data.length; i++) {
                       if (select2Data[i].id === string) {
                           window.open("org-protocol://roam-file?file="
@@ -374,7 +375,9 @@
                       // to prevent flickering
                       $("#fileframe").css("display", "none");
                   }
-                  $("#filenode").attr("src", $('#filenode').attr('src'));
+                  const url = document.getElementById("filenode")
+                        .contentWindow.location.href;
+                  $("#filenode").attr("src", url);
               });
 
           function onWindowResize () {
