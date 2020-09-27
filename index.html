@@ -49,17 +49,16 @@
           z-index: 100;
       }
 
-      #iframe-button {
-          display: block;
+      #iframe-buttons {
           position: absolute;
           z-index: 101;
       }
 
-      #edit-button {
-          display: block;
-          position: absolute;
-          left: 5em;
-          z-index: 101;
+      #back-button,
+      #edit-button,
+      #refresh-button {
+          display: inline-block;
+          z-index: 102;
       }
 
       #view-menu {
@@ -174,7 +173,7 @@
     </div>
     <div class="box" id="preview-frame">
       <button class="btn btn-link float-left"
-              id="iframe-button"
+              id="back-button"
               onclick="history.back()"> Back </button>
       <iframe src="" id="hovernode">
       </iframe>
@@ -245,8 +244,11 @@
     <div id="buffer-network"></div>
     <div id="temp-network"></div>
     <div class="fileframe" id="fileframe">
-      <button class="btn btn-link float-left" id="iframe-button">Back</button>
-      <button class="btn btn-link" id="edit-button">Edit</button>
+      <div id="iframe-buttons">
+        <button class="btn btn-link float-left" id="back-button">Back</button>
+        <button class="btn btn-link" id="edit-button">Edit</button>
+        <button class="btn btn-link" id="refresh-button">Refresh</button>
+      </div>
       <iframe src="" id="filenode"></iframe>
       <iframe src="" id="backlinks"></iframe>
     </div>
@@ -341,7 +343,7 @@
           $("#fileframe").css("OTransform", transformString);
           $("#fileframe").css("transform", transformString);
 
-          $("#fileframe #iframe-button")
+          $("#fileframe #back-button")
               .on("click", function iframeGoBack() {
                   if (darkmode) {
                       // Hide iframes until the page is loaded
@@ -352,10 +354,20 @@
               });
 
           $("#fileframe #edit-button")
-              .on("click", function iframeGoEdit() {
+              .on("click", function () {
                   const url = "org-protocol://roam-file?file="
                         .concat(currentFilenodePath);
                   window.open(url, "_self");
+              });
+
+          $("#fileframe #refresh-button")
+              .on("click", function () {
+                  if (darkmode) {
+                      // Hide iframes until the page is loaded
+                      // to prevent flickering
+                      $("#fileframe").css("display", "none");
+                  }
+                  $("#filenode").attr("src", $('#filenode').attr('src'));
               });
 
           function onWindowResize () {
