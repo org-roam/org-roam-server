@@ -65,7 +65,10 @@
                     buffer-file-name)))
           "."))
 
-(defvar org-roam-server-db-last-modification nil)
+(defvar org-roam-server-db-last-modification
+  (floor (float-time
+          (file-attribute-modification-time
+           (file-attributes (org-roam-db--get))))))
 
 (defgroup org-roam-server nil
   "org-roam-server customizable variables."
@@ -516,19 +519,17 @@ DESCRIPTION is the shown attribute to the user if the image is not rendered."
   (if org-roam-server-authenticate
       (if (not (string= org-roam-server-token token))
           (httpd-error httpd-current-proc 403)))
-  (let (
-        (node-query `[:select [titles:file titles:title tags] :from titles
+  (let ((node-query `[:select [titles:file titles:title tags] :from titles
                               :left :outer :join tags :on (= titles:file tags:file)
                               ,@(org-roam-graph--expand-matcher 'titles:file t)]))
     (if force
         (insert (format "data: %s\n\n"
                         (org-roam-server-visjs-json node-query)))
       (when (and org-roam-server-network-poll
-                 (or (not org-roam-server-db-last-modification)
-                     (not (eq org-roam-server-db-last-modification
-                              (floor (float-time
-                                      (file-attribute-modification-time
-                                       (file-attributes (org-roam-db--get)))))))))
+                 (not (eq org-roam-server-db-last-modification
+                          (floor (float-time
+                                  (file-attribute-modification-time
+                                   (file-attributes (org-roam-db--get))))))))
         (let ((data (org-roam-server-visjs-json node-query)))
           (setq org-roam-server-db-last-modification
                 (floor (float-time
