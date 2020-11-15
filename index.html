@@ -688,7 +688,10 @@
                   string = string.substring(0, string.lastIndexOf('.'));
                   let link;
                   for (let i = 0; i < select2Data.length; i++) {
-                      if (select2Data[i].id === string) {
+                      // handle the URLs of select2Data[i] with parent directories
+                      let selstr = select2Data[i].id;
+                      selstr = selstr.substring(selstr.lastIndexOf('/')+1);
+                      if (selstr === string) {
                           link = `org-roam-buffer?path=${select2Data[i].path}&` +
                               `label=${select2Data[i].text}&token=${token}`;
                           break
