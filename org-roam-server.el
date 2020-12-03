@@ -578,7 +578,7 @@ DESCRIPTION is the shown attribute to the user if the image is not rendered."
                 (bls (cdr group)))
             (insert (format "** [[server:%s][%s]]\n"
                             (car (last (split-string file-from "/")))
-                            (org-roam--get-title-or-slug file-from)))
+                            (org-roam-db--get-title file-from)))
             (dolist (backlink bls)
               (pcase-let ((`(_ _ ,props) backlink))
                 (insert (s-trim
@@ -603,7 +603,7 @@ DESCRIPTION is the shown attribute to the user if the image is not rendered."
                     (bls (cdr group)))
                 (insert (format "** [[server:%s][%s]]\n"
                                 (car (last (split-string file-from "/")))
-                                (org-roam--get-title-or-slug file-from)))
+                                (org-roam-db--get-title file-from)))
                 (dolist (backlink bls)
                   (pcase-let ((`(_ _ ,props) backlink))
                     (insert (s-trim
