@@ -501,7 +501,10 @@
 
           function onStabilized () {
               // Update positions storage
-              localStorage.positions = JSON.stringify(globalNetwork.getPositions());
+              let networkPositions = globalNetwork.getPositions();
+              if (!jQuery.isEmptyObject(networkPositions)) {
+                  localStorage.positions = JSON.stringify(networkPositions);
+              }
           }
 
           var currentNode;
