@@ -66,9 +66,9 @@
           "."))
 
 (defvar org-roam-server-db-last-modification
-  (floor (float-time
-          (file-attribute-modification-time
-           (file-attributes org-roam-db-location)))))
+  (float-time
+   (file-attribute-modification-time
+    (file-attributes org-roam-db-location))))
 
 (defgroup org-roam-server nil
   "org-roam-server customizable variables."
@@ -526,15 +526,16 @@ DESCRIPTION is the shown attribute to the user if the image is not rendered."
         (insert (format "data: %s\n\n"
                         (org-roam-server-visjs-json node-query)))
       (when (and org-roam-server-network-poll
-                 (not (eq org-roam-server-db-last-modification
-                          (floor (float-time
-                                  (file-attribute-modification-time
-                                   (file-attributes org-roam-db-location)))))))
+                 (> (abs (- org-roam-server-db-last-modification
+                              (float-time
+                               (file-attribute-modification-time
+				(file-attributes org-roam-db-location)))))
+		    1e-6))
         (let ((data (org-roam-server-visjs-json node-query)))
           (setq org-roam-server-db-last-modification
-                (floor (float-time
+                (float-time
                         (file-attribute-modification-time
-                         (file-attributes org-roam-db-location)))))
+                         (file-attributes org-roam-db-location))))
           (insert (format "data: %s\n\n" data)))))))
 
 (defservlet* network-vis-options application/json (token)
