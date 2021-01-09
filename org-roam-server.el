@@ -2,7 +2,7 @@
 
 ;; Author: Göktuğ Karakaşlı <karakasligk@gmail.com>
 ;; URL: https://github.com/goktug97/org-roam-server
-;; Version: 1.0.5
+;; Version: 1.1.0
 ;; Package-Requires: ((org-roam "1.2.1") (org "9.3") (emacs "26.1") (dash "2.17.0") (simple-httpd "1.5.1") (s "1.12.0") (f "0.20.0"))
 
 ;; MIT License
@@ -49,6 +49,7 @@
 (require 'org-roam)
 (require 'org-roam-graph)
 (require 'org-roam-buffer)
+(require 'org-roam-link)
 
 ;;; Code:
 
@@ -194,6 +195,11 @@ or [{ \"id\": \"test\", \"parent\" : \"tags\"  }]"
   :group 'org-roam-server
   :type 'string)
 
+(defcustom org-roam-server-link-auto-replace t
+  "When non-nil, replace Org-roam's roam links on export."
+  :group 'org-roam-server
+  :type 'boolean)
+
 (define-obsolete-variable-alias 'org-roam-server-label-wrap-length
   'org-roam-server-network-label-wrap-length "org-roam-server 1.0.3")
 (define-obsolete-variable-alias 'org-roam-server-label-truncate
@@ -243,6 +249,8 @@ or [{ \"id\": \"test\", \"parent\" : \"tags\"  }]"
          (setq-local org-export-with-sub-superscripts nil)
          (setq-local org-html-style-default org-roam-server-export-style)
          (insert-file-contents ,file)
+         (when org-roam-server-link-auto-replace
+           (org-roam-link-replace-all))
 
          ;; Handle served files
          (if org-roam-server-serve-files
