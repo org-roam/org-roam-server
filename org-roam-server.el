@@ -2,7 +2,7 @@
 
 ;; Author: Göktuğ Karakaşlı <karakasligk@gmail.com>
 ;; URL: https://github.com/goktug97/org-roam-server
-;; Version: 1.1.0
+;; Version: 1.1.1
 ;; Package-Requires: ((org-roam "1.2.1") (org "9.3") (emacs "26.1") (dash "2.17.0") (simple-httpd "1.5.1") (s "1.12.0") (f "0.20.0"))
 
 ;; MIT License
@@ -245,10 +245,9 @@ or [{ \"id\": \"test\", \"parent\" : \"tags\"  }]"
          (if (not (string= org-roam-server-token token))
              (httpd-error httpd-current-proc 403)))
      (let ((html-string))
-       (with-temp-buffer
+       (org-roam--with-temp-buffer ,file
          (setq-local org-export-with-sub-superscripts nil)
          (setq-local org-html-style-default org-roam-server-export-style)
-         (insert-file-contents ,file)
          (when org-roam-server-link-auto-replace
            (org-roam-link-replace-all))
 
@@ -535,15 +534,15 @@ DESCRIPTION is the shown attribute to the user if the image is not rendered."
                         (org-roam-server-visjs-json node-query)))
       (when (and org-roam-server-network-poll
                  (> (abs (- org-roam-server-db-last-modification
-                              (float-time
-                               (file-attribute-modification-time
-				(file-attributes org-roam-db-location)))))
-		    1e-6))
+                            (float-time
+                             (file-attribute-modification-time
+                              (file-attributes org-roam-db-location)))))
+                    1e-6))
         (let ((data (org-roam-server-visjs-json node-query)))
           (setq org-roam-server-db-last-modification
                 (float-time
-                        (file-attribute-modification-time
-                         (file-attributes org-roam-db-location))))
+                 (file-attribute-modification-time
+                  (file-attributes org-roam-db-location))))
           (insert (format "data: %s\n\n" data)))))))
 
 (defservlet* network-vis-options application/json (token)
@@ -618,7 +617,7 @@ DESCRIPTION is the shown attribute to the user if the image is not rendered."
                     (insert (s-trim
                              (s-replace "\n" " "
                                         (s-replace
-                                         (format "file:%s" (f-full org-roam-directory))
+                                         "file:"
                                          "server:" (plist-get props :content)))))
                     (insert "\n\n"))))))
         (insert "\n\n* No backlinks!"))))
