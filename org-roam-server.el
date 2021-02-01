@@ -2,7 +2,7 @@
 
 ;; Author: Göktuğ Karakaşlı <karakasligk@gmail.com>
 ;; URL: https://github.com/goktug97/org-roam-server
-;; Version: 1.1.1
+;; Version: 1.1.2
 ;; Package-Requires: ((org-roam "1.2.1") (org "9.3") (emacs "26.1") (dash "2.17.0") (simple-httpd "1.5.1") (s "1.12.0") (f "0.20.0"))
 
 ;; MIT License
@@ -589,11 +589,12 @@ DESCRIPTION is the shown attribute to the user if the image is not rendered."
                             (org-roam-db--get-title file-from)))
             (dolist (backlink bls)
               (pcase-let ((`(_ _ ,props) backlink))
-                (insert (s-trim
-                         (s-replace "\n" " "
-                                    (s-replace
-                                     (format "file:%s" (f-full org-roam-directory))
-                                     "server:" (plist-get props :content)))))
+                (if-let ((content (funcall org-roam-buffer-preview-function file-from (plist-get prop :point))))
+                    (insert (s-trim
+                             (s-replace "\n" " "
+                                        (s-replace
+                                         (format "file:%s" (f-full org-roam-directory))
+                                         "server:" content)))))
                 (insert "\n\n"))))))
     (insert "\n\n* No cite backlinks!")))
 
@@ -607,19 +608,20 @@ DESCRIPTION is the shown attribute to the user if the image is not rendered."
                       (format "\n\n* %d %s\n"
                               l (org-roam-buffer--pluralize "Backlink" l))))
             (dolist (group grouped-backlinks)
-              (let ((file-from (car group))
-                    (bls (cdr group)))
+              (let* ((file-from (car group))
+                     (props (mapcar (lambda (row) (nth 2 row)) (cdr group)))
+                     (props (seq-sort-by (lambda (p) (plist-get p :point)) #'< props)))
                 (insert (format "** [[server:%s][%s]]\n"
                                 (car (last (split-string file-from "/")))
                                 (org-roam-db--get-title file-from)))
-                (dolist (backlink bls)
-                  (pcase-let ((`(_ _ ,props) backlink))
-                    (insert (s-trim
-                             (s-replace "\n" " "
-                                        (s-replace
-                                         "file:"
-                                         "server:" (plist-get props :content)))))
-                    (insert "\n\n"))))))
+                (dolist (prop props)
+                  (if-let ((content (funcall org-roam-buffer-preview-function file-from (plist-get prop :point))))
+                      (insert (s-trim
+                               (s-replace "\n" " "
+                                          (s-replace
+                                           "file:"
+                                           "server:" content)))))
+                  (insert "\n\n")))))
         (insert "\n\n* No backlinks!"))))
 
 (defservlet* org-roam-buffer text/html (path label token)
