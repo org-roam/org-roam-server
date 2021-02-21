@@ -200,6 +200,12 @@ or [{ \"id\": \"test\", \"parent\" : \"tags\"  }]"
   :group 'org-roam-server
   :type 'boolean)
 
+(defcustom org-roam-server-default-darkmode nil
+  "Enable or disable preview of notes by default.
+Default: nil"
+  :group 'org-roam-server
+  :type 'boolean)
+
 (define-obsolete-variable-alias 'org-roam-server-label-wrap-length
   'org-roam-server-network-label-wrap-length "org-roam-server 1.0.3")
 (define-obsolete-variable-alias 'org-roam-server-label-truncate
@@ -564,6 +570,13 @@ DESCRIPTION is the shown attribute to the user if the image is not rendered."
   (insert (format "{\"include\" : %s, \"exclude\": %s}"
                   org-roam-server-default-include-filters
                   org-roam-server-default-exclude-filters)))
+
+(defservlet* default-darkmode application/json (token)
+  (if org-roam-server-authenticate
+      (if (not (string= org-roam-server-token token))
+          (httpd-error httpd-current-proc 403)))
+  (insert (if org-roam-server-default-darkmode "{ \"darkmode\" : true}" "{ \"darkmode\" : false}"))
+)
 
 (defun org-roam-server-insert-title (title)
   "Insert the TITLE as `org-document-title`."

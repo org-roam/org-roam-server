@@ -405,7 +405,17 @@
               function () {previewFrame.style.display = "none";});
 
           var darkmode;
-          if (localStorage.darkmode === "true") {
+
+          $.ajax({
+            async: false,
+            type: 'GET',
+            url: `/default-darkmode?token=${token}`,
+              success : function(data) {
+                  darkmode = data.darkmode;
+              }
+          });
+
+          if (localStorage.darkmode === "true" || darkmode) {
               $('#colormode-checkbox').bootstrapToggle('on')
           } else {
               $('#colormode-checkbox').bootstrapToggle('off')
