@@ -519,6 +519,16 @@
 
           var currentNode;
           var preview = false;
+	
+         $.ajax({
+            async: false,
+            type: 'GET',
+            url: `/default-preview?token=${token}`,
+              success : function(data) {
+                  preview = data.preview;
+              }
+          });
+
 
           var currentBuffer;
           var oldCurrentBufferData = "";
