@@ -361,7 +361,7 @@
                   for (let i = 0; i < select2Data.length; i++) {
                       if (select2Data[i].id === string) {
                           window.open("org-protocol://roam-file?file="
-                                      .concat(select2Data[i].path),
+                                      .concat(encodeURIComponent(select2Data[i].path)),
                                       "_self");
                           break
                       }
