@@ -2,7 +2,7 @@
 
 ;; Author: Göktuğ Karakaşlı <karakasligk@gmail.com>
 ;; URL: https://github.com/goktug97/org-roam-server
-;; Version: 1.1.2
+;; Version: 1.1.3
 ;; Package-Requires: ((org-roam "1.2.1") (org "9.3") (emacs "26.1") (dash "2.17.0") (simple-httpd "1.5.1") (s "1.12.0") (f "0.20.0"))
 
 ;; MIT License
@@ -589,7 +589,7 @@ DESCRIPTION is the shown attribute to the user if the image is not rendered."
                             (org-roam-db--get-title file-from)))
             (dolist (backlink bls)
               (pcase-let ((`(_ _ ,props) backlink))
-                (if-let ((content (funcall org-roam-buffer-preview-function file-from (plist-get prop :point))))
+                (if-let ((content (funcall org-roam-buffer-preview-function file-from (plist-get props :point))))
                     (insert (s-trim
                              (s-replace "\n" " "
                                         (s-replace
