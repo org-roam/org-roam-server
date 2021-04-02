@@ -358,6 +358,7 @@
                                       .contentWindow.location.href);
                   let string = url.pathname.substring(
                       1, url.pathname.lastIndexOf('.'));
+                  string = decodeURI(string);
                   for (let i = 0; i < select2Data.length; i++) {
                       if (select2Data[i].id === string) {
                           window.open("org-protocol://roam-file?file="
@@ -687,6 +688,7 @@
               $("#filenode").on("load", function () {
                   let string = document.getElementById("filenode")
                       .contentWindow.location.href;
+                  string = decodeURI(string)
                   string = string.substring(string.lastIndexOf('/') + 1);
                   string = string.substring(0, string.lastIndexOf('.'));
                   let link;
