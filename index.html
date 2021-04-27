@@ -11,6 +11,7 @@
     <script type="text/javascript" src="assets/bootstrap.min.js"></script>
     <script type="text/javascript" src="assets/select2.min.js"></script>
     <script type="text/javascript" src="assets/bootstrap-toggle.min.js"></script>
+    <script type="text/javascript" src="assets/vis-util.js"></script>
 
     <style type="text/css">
       * { padding: 0; margin: 0; }
@@ -162,14 +163,25 @@
           background-color: #1d1e20;
           color: #c7cec6 ;
       }
+     
+      #config {
+          position: absolute;
+        left: 30px;
+          top: 20px;
+        width: 400px;
+        height: 600px;
+        background-color: #ffffff;
+          z-index: 5;
+      }
+     
     </style>
   </head>
 
   <body>
     <div id="dropdownfiles">
-      <select class="dropdownfiles" name="files" style="width: 100%;">
-        <option></option>
-      </select>
+     <select class="dropdownfiles" name="files" style="width: 100%;">
+       <option></option>
+     </select>
     </div>
     <div class="box" id="preview-frame">
       <button class="btn btn-link float-left"
@@ -252,6 +264,9 @@
       <iframe src="" id="filenode"></iframe>
       <iframe src="" id="backlinks"></iframe>
     </div>
+
+    
+    <div id="config"></config>
 
     <script type="text/javascript">
 
@@ -443,9 +458,24 @@
           var options = $.extend(true, {
               nodes: {shape: "dot"},
               interaction: {hover: true},
-              layout: {improvedLayout: true}
+              layout: {improvedLayout: true},
           }, customNetworkOptions);
 
+          var configoptions = $.extend(true, {
+             options,      
+        configure: {
+            filter: function (option, path) {
+              if (path.indexOf("physics") !== -1) {
+                return true;
+              }
+              if (path.indexOf("smooth") !== -1 || option === "smooth") {
+                return true;
+              }
+              return false;
+            },
+            container: document.getElementById("config"),
+          }
+                             });
           var tags;
 
           // Initialize the network
@@ -484,7 +514,7 @@
           globalNetwork = new vis.Network(document.getElementById("global-network"),
                                           {nodes: view,
                                            edges: edgeDataset},
-                                          options);
+                                          configoptions);
 
           var tempNetwork = new vis.Network(document.getElementById("temp-network"),
                                             {nodes: nodeDataset,
