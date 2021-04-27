@@ -11,7 +11,8 @@
     <script type="text/javascript" src="assets/bootstrap.min.js"></script>
     <script type="text/javascript" src="assets/select2.min.js"></script>
     <script type="text/javascript" src="assets/bootstrap-toggle.min.js"></script>
-    <script type="text/javascript" src="assets/vis-util.js"></script>
+    <script type="text/javascript" src="assets/vis-utils.js"></script>
+    
 
     <style type="text/css">
       * { padding: 0; margin: 0; }
@@ -124,6 +125,12 @@
           width: %50
       }
 
+     #toggle-tweaks {
+         position: relative;
+         float: left;
+         width: %50;
+     }
+
       #debug-button {
           display: none;
           position: absolute;
@@ -166,12 +173,15 @@
      
       #config {
           position: absolute;
-        left: 30px;
-          top: 20px;
-        width: 400px;
-        height: 600px;
+        left: 20px;
+          top: 40px;
+        width: 550px;
+        height: 800px;
         background-color: #ffffff;
           z-index: 5;
+         display: none;
+     border-width: 1px;
+          padding: 10px; 
       }
      
     </style>
@@ -222,7 +232,11 @@
     <button class="btn btn-sm btn-primary btn-simple" id="toggle-preview">
       Enable Preview
     </button>
-
+    
+    <button class="btn btn-sm btn-primary btn-simple" id="toggle-tweaks">
+      Show Tweaks
+    </button>
+    
     <div id="controls">
       <div id="dropdownfilters">
         <select class="dropdownfilters" name="tags"
@@ -431,6 +445,9 @@
                   $(document.body).addClass("darkmode");
                   document.body.style.backgroundColor = "#1d1e20";
                   document.body.style.color = "#c7cec6";
+                  $("div.vis-configuration.vis-config-item.vis-config-s2 > *").css("background-color", "#3d3d3d");
+                  $("div.vis-configuration.vis-config-item.vis-config-s3 > *").css("background-color", "#1f1f1f");
+                  $("#config").css("background-color", "#2e2e2e");
                   darkmode = true;
                   localStorage.darkmode = true;
                   iframeSetColor("filenode", "#1d1e20", "#c7cec6");
@@ -443,6 +460,9 @@
                   $(document.body).removeClass("darkmode");
                   document.body.style.backgroundColor = "white";
                   document.body.style.color = "black";
+                  $("div.vis-configuration.vis-config-item.vis-config-s2 > *").css("background-color", "#f7f8fa");
+                  $("div.vis-configuration.vis-config-item.vis-config-s3 > *").css("background-color", "#e4e9f0");
+                  $("#config").css("background-color", "#f1f1f1");
                   darkmode = false;
                   localStorage.darkmode = false;
                   iframeSetColor("filenode", "white", "black");
@@ -462,7 +482,6 @@
           }, customNetworkOptions);
 
           var configoptions = $.extend(true, {
-             options,      
         configure: {
             filter: function (option, path) {
               if (path.indexOf("physics") !== -1) {
@@ -475,7 +494,8 @@
             },
             container: document.getElementById("config"),
           }
-                             });
+                                     }, options
+                             );
           var tags;
 
           // Initialize the network
@@ -539,6 +559,7 @@
 
           var currentNode;
           var preview = false;
+          var tweaks = false;
 
           var currentBuffer;
           var oldCurrentBufferData = "";
@@ -799,6 +820,8 @@
               $("#global-network").css("display", "none");
               $("#buffer-network").css("display", "block");
               $("#toggle-list-type-button").css("display", "none");
+              $("#toggle-tweaks").css("display","none");
+              $("#config").css("display", "none");
               if (currentNode) {
                   drawBufferNetwork();
               }
@@ -813,6 +836,8 @@
               $("#dropdownfilters").css("display", "none");
               $("#fileframe").css("display", "block");
               $("#toggle-list-type-button").css("display", "none");
+              $("#toggle-tweaks").css("display","none");
+              $("#config").css("display", "none");
           });
           $("#toggle-preview").click(function() {
               if (preview) {
@@ -821,6 +846,17 @@
               } else {
                   preview = true;
                   $("#toggle-preview").text("Disable Preview");
+              }
+          });
+          $("#toggle-tweaks").click(function() {
+              if (tweaks) {
+                  tweaks = false;
+                  $("#toggle-tweaks").text("Show Tweaks");
+                  $("#config").css("display", "none");
+              } else {
+                  tweaks = true;
+                  $("#toggle-tweaks").text("Hide Tweaks");
+                  $("#config").css("display", "block");
               }
           });
           $("#inputdistance").on("input", drawBufferNetwork);
