@@ -390,8 +390,8 @@ This is added as a hook to `org-capture-after-finalize-hook'."
           (push (remove nil (append (list (cons 'from title-source)
                                   (cons 'to title-target)
                                   (cons 'arrows org-roam-server-network-arrows)
-                                (if org-roam-server-cite-edge-dashes
-                                  (cons 'dashes org-roam-server-cite-edge-dashes)) nil)
+                                (when org-roam-server-cite-edge-dashes
+                                  (cons 'dashes org-roam-server-cite-edge-dashes)))
                                     (pcase org-roam-server-extra-cite-edge-options
                                       ('nil nil)
                                       ((pred functionp)
