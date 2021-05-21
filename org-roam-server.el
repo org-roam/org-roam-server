@@ -192,7 +192,8 @@ In the first case options are applied to all cite-edges."
           (function :tag "Custom function")))
 
 (defcustom org-roam-server-cite-edge-dashes nil
-  "When non-nil, changes the edges created through org-roam-bibtex citations to dashes
+  "When non-nil, change citation edges to dashes.
+Changes edges that are created through org-roam-bibtex citations
 to more easily distinguish them from other edges."
   :group 'org-roam-server
   :type 'boolean)
