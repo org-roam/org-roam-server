@@ -181,6 +181,23 @@ In the first case options are applied to all edges."
           (list :tag "Argument to json-encode")
           (function :tag "Custom function")))
 
+(defcustom org-roam-server-extra-cite-edge-options nil
+  "Additional options for edges created through citations with org-roam-bibtex.
+A list suitable for `json-encode', e.g. (list (cons 'width 3)),
+or a custom function with one argument EDGE producing such a list.
+In the first case options are applied to all cite-edges."
+  :group 'org-roam-server
+  :type '(choice
+          (list :tag "Argument to json-encode")
+          (function :tag "Custom function")))
+
+(defcustom org-roam-server-cite-edge-dashes nil
+  "When non-nil, change citation edges to dashes.
+Changes edges that are created through org-roam-bibtex citations
+to more easily distinguish them from other edges."
+  :group 'org-roam-server
+  :type 'boolean)
+
 (defcustom org-roam-server-default-include-filters "null"
   "Options to set default include filters, in JSON format.
 e.g. (json-encode (list (list (cons 'id \"test\") (cons 'parent \"tags\"))))
@@ -371,9 +388,20 @@ This is added as a hook to `org-capture-after-finalize-hook'."
       (dolist (edge edges-cites)
         (let* ((title-source (org-roam--path-to-slug (elt edge 0)))
                (title-target (org-roam--path-to-slug (elt edge 1))))
-          (push (remove nil (list (cons 'from title-source)
+          (push (remove nil (append (list (cons 'from title-source)
                                   (cons 'to title-target)
-                                  (cons 'arrows org-roam-server-network-arrows)))
+                                  (cons 'arrows org-roam-server-network-arrows)
+                                (when org-roam-server-cite-edge-dashes
+                                  (cons 'dashes org-roam-server-cite-edge-dashes)))
+                                    (pcase org-roam-server-extra-cite-edge-options
+                                      ('nil nil)
+                                      ((pred functionp)
+                                       (funcall org-roam-server-extra-cite-edge-options edge))
+                                      ((pred listp)
+                                       org-roam-server-extra-cite-edge-options)
+                                      (wrong-type
+                                       (error "Wrong type of org-roam-server-extra-cite-edge-options: %s"
+                                              wrong-type)))))
                 (cdr (elt graph 1)))))
       (json-encode graph))))
 

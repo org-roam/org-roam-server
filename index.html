@@ -6,11 +6,13 @@
     <link rel="stylesheet" href="assets/bootstrap.min.css">
     <link rel="stylesheet" href="assets/bootstrap-toggle.min.css">
     <link rel="stylesheet" href="assets/select2.min.css">
+    <link rel="stylesheet" type="text/css" href="/assets/tweaks.css">
     <script type="text/javascript" src="assets/jquery-3.5.0.min.js"></script>
     <script type="text/javascript" src="assets/vis-network.min.js"></script>
     <script type="text/javascript" src="assets/bootstrap.min.js"></script>
     <script type="text/javascript" src="assets/select2.min.js"></script>
     <script type="text/javascript" src="assets/bootstrap-toggle.min.js"></script>
+    
 
     <style type="text/css">
       * { padding: 0; margin: 0; }
@@ -123,6 +125,12 @@
           width: %50
       }
 
+     #toggle-tweaks {
+         position: relative;
+         float: left;
+         width: %50;
+     }
+
       #debug-button {
           display: none;
           position: absolute;
@@ -162,14 +170,16 @@
           background-color: #1d1e20;
           color: #c7cec6 ;
       }
+     
+     
     </style>
   </head>
 
   <body>
     <div id="dropdownfiles">
-      <select class="dropdownfiles" name="files" style="width: 100%;">
-        <option></option>
-      </select>
+     <select class="dropdownfiles" name="files" style="width: 100%;">
+       <option></option>
+     </select>
     </div>
     <div class="box" id="preview-frame">
       <button class="btn btn-link float-left"
@@ -210,7 +220,11 @@
     <button class="btn btn-sm btn-primary btn-simple" id="toggle-preview">
       Enable Preview
     </button>
-
+    
+    <button class="btn btn-sm btn-primary btn-simple" id="toggle-tweaks">
+      Show Tweaks
+    </button>
+    
     <div id="controls">
       <div id="dropdownfilters">
         <select class="dropdownfilters" name="tags"
@@ -252,6 +266,9 @@
       <iframe src="" id="filenode"></iframe>
       <iframe src="" id="backlinks"></iframe>
     </div>
+
+    
+    <div id="config"></config>
 
     <script type="text/javascript">
 
@@ -425,6 +442,9 @@
                   if ($("#buffer-network").css("display") === "block") {
                       bufferNetwork.setOptions({nodes: {font: { color: "#c7cec6" }}});
                   }
+                  $(".vis-config-s2").css("background-color", "#3d3d3d");
+                  $(".vis-config-s3").css("background-color", "#1f1f1f");
+                  $("#config").css("background-color", "#2e2e2e");
               } else {
                   $(document.body).removeClass("darkmode");
                   document.body.style.backgroundColor = "white";
@@ -437,6 +457,9 @@
                   if ($("#buffer-network").css("display") === "block") {
                       bufferNetwork.setOptions({nodes: {font: { color: "black" }}});
                   }
+                  $(".vis-config-s2").css("background-color", "#f7f8fa");
+                  $(".vis-config-s3").css("background-color", "#e4e9f0");
+                  $("#config").css("background-color", "#f1f1f1");
               }
           })
 
@@ -444,9 +467,26 @@
           var options = $.extend(true, {
               nodes: {shape: "dot"},
               interaction: {hover: true},
-              layout: {improvedLayout: true}
+              layout: {improvedLayout: true},
           }, customNetworkOptions);
 
+          var configoptions = $.extend(true, {
+         configure: {
+        filter: function (option, path) {
+              if (path.indexOf("physics") !== -1) {
+                return true;
+              }
+              if (path.indexOf("smooth") !== -1 || option === "smooth") {
+                return true;
+              }
+              return false;
+            },
+        // enabled: true,
+        //filter: true,
+            container: document.getElementById("config"),
+          }
+                                     }, options
+                             );
           var tags;
 
           // Initialize the network
@@ -485,7 +525,7 @@
           globalNetwork = new vis.Network(document.getElementById("global-network"),
                                           {nodes: view,
                                            edges: edgeDataset},
-                                          options);
+                                          configoptions);
 
           var tempNetwork = new vis.Network(document.getElementById("temp-network"),
                                             {nodes: nodeDataset,
@@ -498,6 +538,10 @@
           globalNetwork.on("hoverNode", onNodeHover);
           globalNetwork.on("blurNode", onNodeBlur);
 
+          globalNetwork.on("stabilizationIterationsDone", function () {
+              network.setOptions( { physics: false } );
+          });
+          
           $('#colormode-checkbox').change()
 
           function onStabilized () {
@@ -510,6 +554,7 @@
 
           var currentNode;
           var preview = false;
+          var tweaks = false;
 
           var currentBuffer;
           var oldCurrentBufferData = "";
@@ -771,6 +816,8 @@
               $("#global-network").css("display", "none");
               $("#buffer-network").css("display", "block");
               $("#toggle-list-type-button").css("display", "none");
+              $("#toggle-tweaks").css("display","none");
+              $("#config").css("display", "none");
               if (currentNode) {
                   drawBufferNetwork();
               }
@@ -785,6 +832,8 @@
               $("#dropdownfilters").css("display", "none");
               $("#fileframe").css("display", "block");
               $("#toggle-list-type-button").css("display", "none");
+              $("#toggle-tweaks").css("display","none");
+              $("#config").css("display", "none");
           });
           $("#toggle-preview").click(function() {
               if (preview) {
@@ -793,6 +842,17 @@
               } else {
                   preview = true;
                   $("#toggle-preview").text("Disable Preview");
+              }
+          });
+          $("#toggle-tweaks").click(function() {
+              if (tweaks) {
+                  tweaks = false;
+                  $("#toggle-tweaks").text("Show Tweaks");
+                  $("#config").css("display", "none");
+              } else {
+                  tweaks = true;
+                  $("#toggle-tweaks").text("Hide Tweaks");
+                  $("#config").css("display", "block");
               }
           });
           $("#inputdistance").on("input", drawBufferNetwork);
