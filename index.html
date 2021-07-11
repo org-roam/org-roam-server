@@ -81,15 +81,16 @@
           bottom: 0;
           left: 0;
           right: 0;
-          max-height: 40px;
+          max-height: 100px;
           display: flex;
           z-index: 5;
       }
 
-      #dropdownnodes, #dropdownfilters {
+      #dropdownnodes, #dropdownfilters, #dropdownlocate {
           display: none;
           align-self: flex-start;
           width: 25%;
+          margin: 3px;
       }
 
       #formdistance {
@@ -113,10 +114,14 @@
 
       #reload-button {
           margin-left: auto;
+          height: 35px;
       }
 
       #toggle-list-type-button {
           margin-right: auto;
+          margin-left: 3px;
+          margin-top: 3px;
+          height: 35px;
       }
 
       #toggle-preview {
@@ -227,10 +232,17 @@
     
     <div id="controls">
       <div id="dropdownfilters">
-        <select class="dropdownfilters" name="tags"
-                multiple="multiple" style="width: 100%;">
-          <option></option>
-        </select>
+            <div>
+                <select class="dropdownfilters" name="tags"
+                        multiple="multiple" style="width: 100%">
+                  <option></option>
+                </select>
+            </div>
+            <div style="margin-top: 3px">
+                <select class="dropdownlocate" name="tags" style="width: 100%;">
+                  <option></option>
+                </select>
+            </div>
       </div>
       <div id="dropdownnodes">
         <select class="dropdownnodes" name="nodes" style="width: 100%;">
@@ -659,6 +671,16 @@
                       drawBufferNetwork();
                   });
 
+              $(".dropdownlocate")
+                  .select2({
+                      data: select2Data,
+                      placeholder: 'Node',
+                      width: 'resolve'
+                  })
+                  .on('select2:select', function (e) {
+                      locateNodes(e.params.data.id);
+                  });
+
               // File search dropdown (File Viewer)
               $(".dropdownfiles")
                   .select2({
@@ -1060,6 +1082,25 @@
               }
               return parsed_filters;
           }
+
+          function locateNodes(nodeId) {
+              if (!nodeId) {
+                 return
+              }
+              let position = globalNetwork.getPosition(nodeId);
+              if (!position) {
+                 return
+              }
+              globalNetwork.moveTo({
+                  "position": position,
+                  "animation": {
+                      "duration": 2000,
+                      "easingFunction": "easeInOutQuint"
+                  }
+              })
+              globalNetwork.selectNodes([nodeId])
+          }
+
       });
 
     </script>
