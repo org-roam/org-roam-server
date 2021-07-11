@@ -495,26 +495,26 @@
           var edgeDataset = new vis.DataSet();
 
           var filterColors = new Array();
+          let parsed_filters = parseFilters();
           var view = new vis.DataView(nodeDataset, {
               filter: function (item) {
-                  let parsed_filter;
-                  for (let i = 0; i < filters.length; i++) {
-                      if (filters[i].size > 0) {
-                          if (item.tags) {
-                              let itemTags = new Set(item.tags);
-                              for (let filter of filters[i].values()) {
-                                  parsed_filter = JSON.parse(filter);
-                                  if (parsed_filter.parent === "tags"){
-                                      if ((i == FilterEnum.include ^
-                                           itemTags.has(parsed_filter.id))) {
-                                          return false;
-                                      }
-                                  }
+                  for (let i = 0; i < parsed_filters.length; i++) {
+                      if (parsed_filters[i].size === 0) {
+                          continue;
+                      }
+                      if (item.tags) {
+                          let itemTags = new Set(item.tags);
+                          for (let filter of parsed_filters[i]) {
+                              if (filter.parent !== "tags") {
+                                  continue;
                               }
-                          } else {
-                              if (i == FilterEnum.include) {
+                              if ((i == FilterEnum.include ^ itemTags.has(filter.id))) {
                                   return false;
                               }
+                          }
+                      } else {
+                          if (i == FilterEnum.include) {
+                              return false;
                           }
                       }
                   }
@@ -705,6 +705,7 @@
                   .on('select2:select', function (e) {
                       filters[filterState].add(JSON.stringify(
                           {id: e.params.data.id, parent: e.params.data.parent}));
+                      parsed_filters = parseFilters();
                       view.refresh()
                   })
                   .on('select2:unselect', function (e) {
@@ -716,6 +717,7 @@
 
                       //maintain color map
                       filterColors[e.params.data.id] = null;
+                      parsed_filters = parseFilters();
                       view.refresh()
                   });
 
@@ -1047,7 +1049,19 @@
                   bufferNetwork.setOptions({nodes: {font: { color: "black" }}});
               }
           }
+
+          function parseFilters() {
+              let parsed_filters = []
+              for (let i = 0; i < filters.length; i++) {
+                  parsed_filters[i] = [];
+                  for (let filter of filters[i].values()) {
+                      parsed_filters[i].push(JSON.parse(filter));
+                  }
+              }
+              return parsed_filters;
+          }
       });
+
     </script>
   </body>
 </html>
