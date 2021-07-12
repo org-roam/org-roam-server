@@ -12,7 +12,6 @@
     <script type="text/javascript" src="assets/bootstrap.min.js"></script>
     <script type="text/javascript" src="assets/select2.min.js"></script>
     <script type="text/javascript" src="assets/bootstrap-toggle.min.js"></script>
-    
 
     <style type="text/css">
       * { padding: 0; margin: 0; }
@@ -239,7 +238,7 @@
                 </select>
             </div>
             <div style="margin-top: 3px">
-                <select class="dropdownlocate" name="tags" style="width: 100%;">
+                <select id="dropdownlocate" name="tags" style="width: 100%;">
                   <option></option>
                 </select>
             </div>
@@ -283,6 +282,19 @@
     <div id="config"></config>
 
     <script type="text/javascript">
+
+      (function ($) {
+          $.fn.refreshDataSelect2 = function (data) {
+              this.select2('data', data);
+
+              // Update options
+              var $select = $(this[0]);
+              var options = data.map(function(item) {
+                  return '<option value="' + item.id + '">' + item.text + '</option>';
+              });
+              $select.html(options.join('')).change();
+          };
+      })(jQuery);
 
       // Maximum of an array given compare function
       Array.prototype.max = function(compare) {
@@ -483,22 +495,21 @@
           }, customNetworkOptions);
 
           var configoptions = $.extend(true, {
-         configure: {
-        filter: function (option, path) {
-              if (path.indexOf("physics") !== -1) {
-                return true;
+              configure: {
+                  filter: function (option, path) {
+                      if (path.indexOf("physics") !== -1) {
+                        return true;
+                      }
+                      if (path.indexOf("smooth") !== -1 || option === "smooth") {
+                        return true;
+                      }
+                      return false;
+                  },
+                  // enabled: true,
+                  //filter: true,
+                  container: document.getElementById("config"),
               }
-              if (path.indexOf("smooth") !== -1 || option === "smooth") {
-                return true;
-              }
-              return false;
-            },
-        // enabled: true,
-        //filter: true,
-            container: document.getElementById("config"),
-          }
-                                     }, options
-                             );
+          }, options);
           var tags;
 
           // Initialize the network
@@ -652,12 +663,7 @@
 
           var select2Data = [];
           function updateDropdown() {
-              select2Data = [];
-              for (let i = 0 ; i < roamData.nodes.length; i++) {
-                  select2Data.push({id: roamData.nodes[i].id,
-                                    text: roamData.nodes[i].title,
-                                    path: roamData.nodes[i].path})
-              }
+              select2Data = prepareSelect2NodeData(roamData.nodes);
 
               // Node search dropdown (Buffer Network View)
               $(".dropdownnodes")
@@ -671,10 +677,10 @@
                       drawBufferNetwork();
                   });
 
-              $(".dropdownlocate")
+              $("#dropdownlocate")
                   .select2({
                       data: select2Data,
-                      placeholder: 'Node',
+                      placeholder: 'Select a node and move to it',
                       width: 'resolve'
                   })
                   .on('select2:select', function (e) {
@@ -729,6 +735,7 @@
                           {id: e.params.data.id, parent: e.params.data.parent}));
                       parsed_filters = parseFilters();
                       view.refresh()
+                      refreshLocateNodeData()
                   })
                   .on('select2:unselect', function (e) {
                       for (let i = 0; i < filters.length; i++) {
@@ -741,6 +748,7 @@
                       filterColors[e.params.data.id] = null;
                       parsed_filters = parseFilters();
                       view.refresh()
+                      refreshLocateNodeData()
                   });
 
               for (let i = 0; i < defaultIncludeFilters.length; i++) {
@@ -1099,6 +1107,33 @@
                   }
               })
               globalNetwork.selectNodes([nodeId])
+          }
+
+          function refreshLocateNodeData() {
+              let dropdownLocate = $("#dropdownlocate")
+              let nodes = view.get()
+              let currentSelection = dropdownLocate.select2('data');
+              if (currentSelection.length === 0 || nodes.length === select2Data.length) {
+                return select2Data
+              }
+              let filteredSelect2Data = prepareSelect2NodeData(nodes)
+              console.log(filteredSelect2Data)
+              dropdownLocate.refreshDataSelect2(filteredSelect2Data)
+          }
+
+          function prepareSelect2NodeData(nodes) {
+              let select2Data = []
+              if (!nodes) {
+                  return select2Data
+              }
+              for (let i = 0 ; i < nodes.length; i++) {
+                  select2Data.push({
+                      id: nodes[i].id,
+                      text: nodes[i].title,
+                      path: nodes[i].path
+                  })
+              }
+              return select2Data
           }
 
       });
