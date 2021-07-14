@@ -1094,22 +1094,18 @@
               return parsed_filters;
           }
 
+          let lastId = ''
           function locateNodes(nodeId) {
               if (!nodeId) {
                  return
               }
-              let position = globalNetwork.getPosition(nodeId);
-              if (!position) {
-                 return
+              if (lastId === nodeId){
+                  return
               }
-              globalNetwork.moveTo({
-                  "position": position,
-                  "animation": {
-                      "duration": 2000,
-                      "easingFunction": "easeInOutQuint"
-                  }
+              lastId = nodeId
+              globalNetwork.focus(nodeId, {
+                  "animation": true
               })
-              globalNetwork.selectNodes([nodeId])
           }
 
           function refreshLocateNodeData() {
@@ -1120,7 +1116,6 @@
                 return select2Data
               }
               let filteredSelect2Data = prepareSelect2NodeData(nodes)
-              console.log(filteredSelect2Data)
               dropdownLocate.refreshDataSelect2(filteredSelect2Data)
           }
 
