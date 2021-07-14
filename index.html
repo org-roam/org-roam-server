@@ -525,7 +525,7 @@
           var view = new vis.DataView(nodeDataset, {
               filter: function (item) {
                   for (let i = 0; i < parsed_filters.length; i++) {
-                      if (parsed_filters[i].size === 0) {
+                      if (parsed_filters[i].length === 0) {
                           continue;
                       }
                       if (item.tags) {
