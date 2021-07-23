@@ -12,7 +12,6 @@
     <script type="text/javascript" src="assets/bootstrap.min.js"></script>
     <script type="text/javascript" src="assets/select2.min.js"></script>
     <script type="text/javascript" src="assets/bootstrap-toggle.min.js"></script>
-    
 
     <style type="text/css">
       * { padding: 0; margin: 0; }
@@ -81,15 +80,16 @@
           bottom: 0;
           left: 0;
           right: 0;
-          max-height: 40px;
+          max-height: 100px;
           display: flex;
           z-index: 5;
       }
 
-      #dropdownnodes, #dropdownfilters {
+      #dropdownnodes, #dropdownfilters, #dropdownlocate {
           display: none;
           align-self: flex-start;
           width: 25%;
+          margin: 3px;
       }
 
       #formdistance {
@@ -112,11 +112,18 @@
       }
 
       #reload-button {
+          position: fixed;
+          bottom: 3px;
+          right: 3px;
           margin-left: auto;
+          height: 35px;
       }
 
       #toggle-list-type-button {
           margin-right: auto;
+          margin-left: 3px;
+          margin-top: 50px;
+          height: 35px;
       }
 
       #toggle-preview {
@@ -227,10 +234,17 @@
     
     <div id="controls">
       <div id="dropdownfilters">
-        <select class="dropdownfilters" name="tags"
-                multiple="multiple" style="width: 100%;">
-          <option></option>
-        </select>
+            <div style="margin-top: 3px">
+                <select id="dropdownlocate" name="tags" style="width: 100%;">
+                  <option></option>
+                </select>
+            </div>
+            <div>
+                <select class="dropdownfilters" name="tags"
+                        multiple="multiple" style="width: 100%">
+                  <option></option>
+                </select>
+            </div>
       </div>
       <div id="dropdownnodes">
         <select class="dropdownnodes" name="nodes" style="width: 100%;">
@@ -271,6 +285,19 @@
     <div id="config"></config>
 
     <script type="text/javascript">
+
+      (function ($) {
+          $.fn.refreshDataSelect2 = function (data) {
+              this.select2('data', data);
+
+              // Update options
+              var $select = $(this[0]);
+              var options = data.map(function(item) {
+                  return '<option value="' + item.id + '">' + item.text + '</option>';
+              });
+              $select.html(options.join('')).change();
+          };
+      })(jQuery);
 
       // Maximum of an array given compare function
       Array.prototype.max = function(compare) {
@@ -471,22 +498,21 @@
           }, customNetworkOptions);
 
           var configoptions = $.extend(true, {
-         configure: {
-        filter: function (option, path) {
-              if (path.indexOf("physics") !== -1) {
-                return true;
+              configure: {
+                  filter: function (option, path) {
+                      if (path.indexOf("physics") !== -1) {
+                        return true;
+                      }
+                      if (path.indexOf("smooth") !== -1 || option === "smooth") {
+                        return true;
+                      }
+                      return false;
+                  },
+                  // enabled: true,
+                  //filter: true,
+                  container: document.getElementById("config"),
               }
-              if (path.indexOf("smooth") !== -1 || option === "smooth") {
-                return true;
-              }
-              return false;
-            },
-        // enabled: true,
-        //filter: true,
-            container: document.getElementById("config"),
-          }
-                                     }, options
-                             );
+          }, options);
           var tags;
 
           // Initialize the network
@@ -495,26 +521,26 @@
           var edgeDataset = new vis.DataSet();
 
           var filterColors = new Array();
+          let parsed_filters = parseFilters();
           var view = new vis.DataView(nodeDataset, {
               filter: function (item) {
-                  let parsed_filter;
-                  for (let i = 0; i < filters.length; i++) {
-                      if (filters[i].size > 0) {
-                          if (item.tags) {
-                              let itemTags = new Set(item.tags);
-                              for (let filter of filters[i].values()) {
-                                  parsed_filter = JSON.parse(filter);
-                                  if (parsed_filter.parent === "tags"){
-                                      if ((i == FilterEnum.include ^
-                                           itemTags.has(parsed_filter.id))) {
-                                          return false;
-                                      }
-                                  }
+                  for (let i = 0; i < parsed_filters.length; i++) {
+                      if (parsed_filters[i].length === 0) {
+                          continue;
+                      }
+                      if (item.tags) {
+                          let itemTags = new Set(item.tags);
+                          for (let filter of parsed_filters[i]) {
+                              if (filter.parent !== "tags") {
+                                  continue;
                               }
-                          } else {
-                              if (i == FilterEnum.include) {
+                              if ((i == FilterEnum.include ^ itemTags.has(filter.id))) {
                                   return false;
                               }
+                          }
+                      } else {
+                          if (i == FilterEnum.include) {
+                              return false;
                           }
                       }
                   }
@@ -640,12 +666,7 @@
 
           var select2Data = [];
           function updateDropdown() {
-              select2Data = [];
-              for (let i = 0 ; i < roamData.nodes.length; i++) {
-                  select2Data.push({id: roamData.nodes[i].id,
-                                    text: roamData.nodes[i].title,
-                                    path: roamData.nodes[i].path})
-              }
+              select2Data = prepareSelect2NodeData(roamData.nodes);
 
               // Node search dropdown (Buffer Network View)
               $(".dropdownnodes")
@@ -657,6 +678,16 @@
                   .on('select2:select', function (e) {
                       currentNode = e.params.data.id;
                       drawBufferNetwork();
+                  });
+
+              $("#dropdownlocate")
+                  .select2({
+                      data: select2Data,
+                      placeholder: 'Select a node and move to it',
+                      width: 'resolve'
+                  })
+                  .on('select2:select', function (e) {
+                      locateNodes(e.params.data.id);
                   });
 
               // File search dropdown (File Viewer)
@@ -705,7 +736,9 @@
                   .on('select2:select', function (e) {
                       filters[filterState].add(JSON.stringify(
                           {id: e.params.data.id, parent: e.params.data.parent}));
+                      parsed_filters = parseFilters();
                       view.refresh()
+                      refreshLocateNodeData()
                   })
                   .on('select2:unselect', function (e) {
                       for (let i = 0; i < filters.length; i++) {
@@ -716,7 +749,9 @@
 
                       //maintain color map
                       filterColors[e.params.data.id] = null;
+                      parsed_filters = parseFilters();
                       view.refresh()
+                      refreshLocateNodeData()
                   });
 
               for (let i = 0; i < defaultIncludeFilters.length; i++) {
@@ -1047,7 +1082,60 @@
                   bufferNetwork.setOptions({nodes: {font: { color: "black" }}});
               }
           }
+
+          function parseFilters() {
+              let parsed_filters = []
+              for (let i = 0; i < filters.length; i++) {
+                  parsed_filters[i] = [];
+                  for (let filter of filters[i].values()) {
+                      parsed_filters[i].push(JSON.parse(filter));
+                  }
+              }
+              return parsed_filters;
+          }
+
+          let lastId = ''
+          function locateNodes(nodeId) {
+              if (!nodeId) {
+                 return
+              }
+              if (lastId === nodeId){
+                  return
+              }
+              lastId = nodeId
+              globalNetwork.focus(nodeId, {
+                  "animation": true
+              })
+          }
+
+          function refreshLocateNodeData() {
+              let dropdownLocate = $("#dropdownlocate")
+              let nodes = view.get()
+              let currentSelection = dropdownLocate.select2('data');
+              if (currentSelection.length === 0 || nodes.length === select2Data.length) {
+                return select2Data
+              }
+              let filteredSelect2Data = prepareSelect2NodeData(nodes)
+              dropdownLocate.refreshDataSelect2(filteredSelect2Data)
+          }
+
+          function prepareSelect2NodeData(nodes) {
+              let select2Data = []
+              if (!nodes) {
+                  return select2Data
+              }
+              for (let i = 0 ; i < nodes.length; i++) {
+                  select2Data.push({
+                      id: nodes[i].id,
+                      text: nodes[i].title,
+                      path: nodes[i].path
+                  })
+              }
+              return select2Data
+          }
+
       });
+
     </script>
   </body>
 </html>
