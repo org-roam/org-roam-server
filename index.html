@@ -6,7 +6,6 @@
     <link rel="stylesheet" href="assets/bootstrap.min.css">
     <link rel="stylesheet" href="assets/bootstrap-toggle.min.css">
     <link rel="stylesheet" href="assets/select2.min.css">
-    <link rel="stylesheet" type="text/css" href="/assets/tweaks.css">
     <script type="text/javascript" src="assets/jquery-3.5.0.min.js"></script>
     <script type="text/javascript" src="assets/vis-network.min.js"></script>
     <script type="text/javascript" src="assets/bootstrap.min.js"></script>
@@ -132,12 +131,6 @@
           width: %50
       }
 
-     #toggle-tweaks {
-         position: relative;
-         float: left;
-         width: %50;
-     }
-
       #debug-button {
           display: none;
           position: absolute;
@@ -226,10 +219,6 @@
 
     <button class="btn btn-sm btn-primary btn-simple" id="toggle-preview">
       Enable Preview
-    </button>
-    
-    <button class="btn btn-sm btn-primary btn-simple" id="toggle-tweaks">
-      Show Tweaks
     </button>
     
     <div id="controls">
@@ -580,7 +569,6 @@
 
           var currentNode;
           var preview = false;
-          var tweaks = false;
 
           var currentBuffer;
           var oldCurrentBufferData = "";
@@ -683,7 +671,7 @@
               $("#dropdownlocate")
                   .select2({
                       data: select2Data,
-                      placeholder: 'Select a node and move to it',
+                      placeholder: 'Move to node',
                       width: 'resolve'
                   })
                   .on('select2:select', function (e) {
@@ -851,7 +839,6 @@
               $("#global-network").css("display", "none");
               $("#buffer-network").css("display", "block");
               $("#toggle-list-type-button").css("display", "none");
-              $("#toggle-tweaks").css("display","none");
               $("#config").css("display", "none");
               if (currentNode) {
                   drawBufferNetwork();
@@ -867,7 +854,6 @@
               $("#dropdownfilters").css("display", "none");
               $("#fileframe").css("display", "block");
               $("#toggle-list-type-button").css("display", "none");
-              $("#toggle-tweaks").css("display","none");
               $("#config").css("display", "none");
           });
           $("#toggle-preview").click(function() {
@@ -877,17 +863,6 @@
               } else {
                   preview = true;
                   $("#toggle-preview").text("Disable Preview");
-              }
-          });
-          $("#toggle-tweaks").click(function() {
-              if (tweaks) {
-                  tweaks = false;
-                  $("#toggle-tweaks").text("Show Tweaks");
-                  $("#config").css("display", "none");
-              } else {
-                  tweaks = true;
-                  $("#toggle-tweaks").text("Hide Tweaks");
-                  $("#config").css("display", "block");
               }
           });
           $("#inputdistance").on("input", drawBufferNetwork);
