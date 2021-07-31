@@ -6,6 +6,12 @@ org-roam-server
 
 ![Graph](https://raw.githubusercontent.com/goktug97/org-roam-server/master/org-roam-server.gif)
 
+## Org Roam v2
+
+For `org-roam v2`, use
+[org-roam-ui](https://github.com/org-roam/org-roam-ui), `org-roam-server`
+only works with `org-roam v1`
+
 ## Installation
 
 `org-roam-server` is on MELPA. You can directly install from there.
