@@ -439,7 +439,17 @@
               function () {previewFrame.style.display = "none";});
 
           var darkmode;
-          if (localStorage.darkmode === "true") {
+
+          $.ajax({
+            async: false,
+            type: 'GET',
+            url: `/default-darkmode?token=${token}`,
+              success : function(data) {
+                  darkmode = data.darkmode;
+              }
+          });
+
+          if (localStorage.darkmode === "true" || darkmode) {
               $('#colormode-checkbox').bootstrapToggle('on')
           } else {
               $('#colormode-checkbox').bootstrapToggle('off')
@@ -569,6 +579,16 @@
 
           var currentNode;
           var preview = false;
+	
+         $.ajax({
+            async: false,
+            type: 'GET',
+            url: `/default-preview?token=${token}`,
+              success : function(data) {
+                  preview = data.preview;
+              }
+          });
+
 
           var currentBuffer;
           var oldCurrentBufferData = "";
