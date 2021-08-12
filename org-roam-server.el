@@ -212,6 +212,12 @@ or [{ \"id\": \"test\", \"parent\" : \"tags\"  }]"
   :group 'org-roam-server
   :type 'string)
 
+(defcustom org-roam-server-tags ""
+  "Option to set tags.
+Format: +tag1 -tag2 +tag3"
+  :group 'org-roam-server
+  :type 'string)
+
 (defcustom org-roam-server-link-auto-replace t
   "When non-nil, replace Org-roam's roam links on export."
   :group 'org-roam-server
@@ -475,6 +481,21 @@ DESCRIPTION is the shown attribute to the user if the image is not rendered."
                      html-link org-roam-server-token desc)
            (format "<img src=%s alt=%s />" html-link desc)))))))
 
+(defun org-roam-server-set-tags()
+  "Process org-roam-server-tags"
+  (interactive)
+  (let* (
+         (tags (read-string "Tags: " org-roam-server-tags))
+         (tags-temp (cdr (split-string tags "\ [\+]")))
+         (plus (mapcar (lambda(a) (string-trim (car (split-string a "\ [\-]")))) tags-temp))
+         (tags-temp (cdr (split-string tags "\ [\-]")))
+         (minus (mapcar (lambda(a) (string-trim (car (split-string a "\ [\+]")))) tags-temp)))
+
+    (setq org-roam-server-default-include-filters (json-encode (mapcar (lambda (tag) (list (cons 'id tag ) (cons 'parent "tags"))) plus)))
+    (setq org-roam-server-default-exclude-filters (json-encode (mapcar (lambda (tag) (list (cons 'id tag ) (cons 'parent "tags"))) minus)))
+    (setq org-roam-server-tags tags)
+         ))
+
 ;;;###autoload
 (define-minor-mode org-roam-server-mode
   "Start the http server and serve org-roam files."
@@ -584,14 +605,16 @@ DESCRIPTION is the shown attribute to the user if the image is not rendered."
       (if (not (string= org-roam-server-token token))
           (httpd-error httpd-current-proc 403)))
   (insert (or org-roam-server-style ":empty")))
-
-(defservlet* default-filters application/json (token)
+(setq org-roam-server-default-filters-last "")
+(defservlet* default-filters text/event-stream (token &optional force)
   (if org-roam-server-authenticate
       (if (not (string= org-roam-server-token token))
           (httpd-error httpd-current-proc 403)))
-  (insert (format "{\"include\" : %s, \"exclude\": %s}"
+  (when (or force (not (equal org-roam-server-default-filters-last org-roam-server-tags)))
+  (insert (format "data: %s\n\n" (format "{\"include\" : %s, \"exclude\": %s}"
                   org-roam-server-default-include-filters
                   org-roam-server-default-exclude-filters)))
+  (setq org-roam-server-default-filters-last org-roam-server-tags)))
 
 (defun org-roam-server-insert-title (title)
   "Insert the TITLE as `org-document-title`."

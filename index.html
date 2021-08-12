@@ -338,12 +338,7 @@
           var defaultExcludeFilters = [];
           const filterButtonTitles = ['Exclude', 'Include'];
           const filterButtonColors = ['#c82333', 'green'];
-
-          $.ajax({
-              async: false,
-              type: 'GET',
-              url: `/default-filters?token=${token}`,
-              success: function(data) {
+          function applyFilters(data) {
                   if (data.include) {
                       for (let i = 0; i < data.include.length; i++) {
                           filters[FilterEnum.include]
@@ -358,8 +353,8 @@
                           defaultExcludeFilters.push(data.exclude[i].id);
                       }
                   }
+              console.log(filters);
               }
-          });
 
           var previewFrame = document.getElementById("preview-frame"); // div
           var hoverNode = document.getElementById("hovernode"); // iframe
@@ -444,7 +439,7 @@
           } else {
               $('#colormode-checkbox').bootstrapToggle('off')
           }
-
+          
           $('#colormode-checkbox').change(function() {
               if(this.checked) {
                   $(document.body).addClass("darkmode");
@@ -584,7 +579,26 @@
                   }
               }
           }
+          var filterSource;
           setCurrentBufferSource();
+          $.get(`/default-filters?force=1&token=${token}`, function(data, status){
+              defaultExcludeFilters = []
+              defaultIncludeFilters = []
+              console.log(`Connection to /default-filters: ${status}`);
+              applyFilters(JSON.parse(data.substring(data.indexOf(':') + 1)));
+              filterSource = new EventSource(`/default-filters?token=${token}`);
+              console.log(filterSource.readyState);
+              filterSource.onmessage = function (event) {
+
+                  defaultExcludeFilters = []
+                  defaultIncludeFilters = []
+                  filters[0].clear();
+                  filters[1].clear();
+                  applyFilters(JSON.parse(event.data));
+                  view.refresh();
+                  updateDropdown();
+                  }
+              });
 
           function debugFunction() {
           }
@@ -611,7 +625,7 @@
           reload();
 
           $("#reload-button").click(function() {
-              roamSource.close()
+              roamSource.close();
               reload();
               currentBuffer.close()
               setCurrentBufferSource();
